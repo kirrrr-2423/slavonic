@@ -1,57 +1,31 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Церковнославянский язык</title>
-<meta name="description" content="Азбука, правила, словарь, клавиатура и проверка правописания церковнославянского языка">
-<meta name="theme-color" content="#F4EEE2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#191613" media="(prefers-color-scheme: dark)">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" href="icons/favicon.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Церковнославянский — клавиатура и правописание</title>
+<meta name="description" content="Церковнославянская клавиатура с проверкой, полным словарём, правилами и практикой">
+<meta name="theme-color" content="#f5f3ed">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Церковнославянский">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="web.css">
+<meta name="apple-mobile-web-app-title" content="ЦСЯ">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="pwa.css">
+<link rel="icon" href="icons/favicon.png"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="studio.css">
 </head>
 <body>
-<div class="app">
-  <aside class="side">
-    <div class="drag" aria-hidden="true"></div>
-    <div class="brand">
-      <span class="brand-glyph cs" aria-hidden="true">А҆</span>
-      <div>
-        <div class="brand-title">Церковнославянский</div>
-        <div class="brand-sub">азбука · правила · клавиатура</div>
-      </div>
-    </div>
-    <label class="search">
-      <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <input id="search" type="search" placeholder="Правила и словарь" aria-label="Поиск по правилам и словарю" autocomplete="off" spellcheck="false">
-    </label>
-    <nav id="nav" aria-label="Разделы"></nav>
-    <div class="fontstatus" id="fontstatus" aria-live="polite"></div>
-  </aside>
-  <main class="main" id="main">
-    <div class="topdrag" aria-hidden="true"></div>
-    <div class="content" id="content"></div>
-  </main>
+<a class="skip-link" href="#content">Перейти к содержимому</a>
+<div class="studio-app">
+ <aside class="studio-side" aria-label="Основная навигация">
+  <a class="studio-brand" href="#klaviatura"><span class="brand-letter cs" aria-hidden="true">А҆</span><span>Церковно-<br>славянский</span></a>
+  <nav id="nav"></nav>
+  <div class="side-bottom"><span>Текст сохраняется в этом браузере</span><button class="quiet" data-route="istochniki">Источники и о программе ↗</button><div id="fontstatus" hidden></div></div>
+ </aside>
+ <div class="studio-body">
+  <header class="studio-top"><div class="crumb"><span id="location">Клавиатура</span></div><label class="global-search"><span aria-hidden="true">⌕</span><input type="search" id="search" aria-label="Поиск по правилам и словарю" placeholder="Найти правило или слово…" autocomplete="off" spellcheck="false"><kbd>⌘ F</kbd></label><button class="quiet pwa-install" id="pwaInstall" hidden>Установить</button><button class="icon-button" id="themeToggle" aria-label="Переключить тему">◐</button></header>
+  <main class="main" id="main"><div class="content" id="content"></div></main>
+ </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="web.js"></script>
-<script src="data.js"></script>
-<script src="titla.js"></script>
-<script src="keyboard.js"></script>
-<script src="checker.js"></script>
-<script src="spell.js"></script>
-<script src="legacy-data.js"></script>
-<script src="legacy.js"></script>
-<script src="dictionary.js"></script>
-<script src="forms.js"></script>
-<script src="app.js"></script>
-</body>
-</html>
+<script src="data.js"></script><script src="titla.js"></script><script src="keyboard.js"></script><script src="checker.js"></script><script src="spell.js"></script><script src="legacy-data.js"></script><script src="legacy.js"></script><script src="dictionary.js"></script><script src="forms.js"></script><script src="practice-data.js"></script><script src="practice.js"></script><script src="studio.js"></script><script src="app.js"></script>
+<script src="pwa.js"></script>
+</body></html>

@@ -1,0 +1,7 @@
+/* Progressive enhancement: controls remain hidden when the browser cannot install. */
+.pwa-install[hidden],.pwa-notice[hidden]{display:none!important}
+.pwa-install{flex:none;font-size:12px;color:var(--accent)}
+.pwa-notice{position:fixed;right:24px;bottom:24px;z-index:80;display:flex;align-items:center;gap:16px;flex-wrap:wrap;max-width:min(620px,calc(100vw - 32px));padding:15px 18px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);box-shadow:0 4px 24px #0002;font:12px/1.5 var(--ui)}
+.pwa-notice button{white-space:normal;text-align:left;min-height:32px}
+.pwa-notice button:first-of-type{color:var(--accent)}
+@media(max-width:720px){.studio-top .pwa-install{font-size:11px}.pwa-notice{right:16px;bottom:16px;gap:8px 16px}.pwa-notice>span{flex-basis:100%}}

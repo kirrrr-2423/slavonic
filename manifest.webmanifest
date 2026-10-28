@@ -1,20 +1,15 @@
 {
   "id": "./",
-  "name": "Церковнославянский язык",
-  "short_name": "Церковнославянский",
-  "description": "Азбука, правила, словарь, клавиатура и проверка правописания церковнославянского языка",
+  "name": "Церковнославянский — клавиатура и правописание",
+  "short_name": "ЦСЯ",
+  "description": "Клавиатура, правописание, словарь и практика церковнославянского языка.",
   "lang": "ru",
   "dir": "ltr",
-  "start_url": "./",
+  "start_url": "./#klaviatura",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F4EEE2",
-  "theme_color": "#F4EEE2",
-  "categories": [
-    "education",
-    "books",
-    "reference"
-  ],
+  "background_color": "#f5f3ed",
+  "theme_color": "#f5f3ed",
   "icons": [
     {
       "src": "icons/icon-192.png",

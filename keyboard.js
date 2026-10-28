@@ -38,7 +38,7 @@
   ];
   const LAT = { Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Backslash: '\\', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/' };
   const latOf = (code) => (code.startsWith('Key') ? code.slice(3) : code.startsWith('Digit') ? code.slice(5) : LAT[code] || '');
-  const MAC = ((window.slavApi && window.slavApi.platform) || 'darwin') === 'darwin';
+  const MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
   const OPT = MAC ? '⌥' : 'Alt';
   const CMD = MAC ? '⌘' : 'Ctrl';
   const FN = { BKSP: '⌫', ENTER: '↵', SHIFT: '⇧ Shift', OPTION: MAC ? '⌥ Option' : 'Alt', SPACE: 'пробел' };
@@ -48,9 +48,9 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* нет хранилища */ } }
   };
   const st = {
-    text: store.get('cs-editor', 'Ѻ҆́тче на́шъ, и҆́же є҆сѝ на нбⷭ҇ѣхъ'),
-    layout: store.get('cs-layout', '1') === '1',
-    size: Number(store.get('cs-edsize', 34)) || 34,
+    text: store.get('cs-demo-editor', 'Ѻ҆́тче на́шъ, и҆́же є҆сѝ на нбⷭ҇ѣхъ'),
+    layout: store.get('cs-demo-layout', '1') === '1',
+    size: Number(store.get('cs-demo-edsize', 34)) || 34,
     shift: false, opt: false, physShift: false, physOpt: false, codes: false
   };
   let ed = null, kb = null;
@@ -68,7 +68,7 @@
     return up ? m.s : m.b;
   }
 
-  function save() { if (ed) st.text = ed.value; store.set('cs-editor', st.text); renderCodes(); }
+  function save() { if (ed) st.text = ed.value; store.set('cs-demo-editor', st.text); renderCodes(); }
 
   function insertInto(el, ch) {
     el.focus();
@@ -98,6 +98,7 @@
       }
       const ch = charFor(code, shift, opt, false);
       k.classList.toggle('off', ch == null);
+      k.disabled = ch == null;
       k.innerHTML = `<span class="lat">${esc(latOf(code))}</span>${faceHTML(ch)}`;
       k.setAttribute('aria-label', ch == null ? 'пусто' : (NAMES[ch] || ch));
     });
@@ -150,7 +151,7 @@
   });
   window.addEventListener('blur', () => { st.physShift = false; st.physOpt = false; updateFaces(); });
 
-  function mount(el) {
+  function mount(el, options = {}) {
     el.innerHTML = `<div class="kbwrap">
 <div class="edbar">
   <label class="switch"><input type="checkbox" id="kbLayout"${st.layout ? ' checked' : ''}><span>Славянская раскладка при наборе</span></label>
@@ -191,7 +192,7 @@
     attachLayout(ed);
     el.querySelector('#kbLayout').addEventListener('change', (e) => {
       st.layout = e.target.checked;
-      store.set('cs-layout', st.layout ? '1' : '0');
+      store.set('cs-demo-layout', st.layout ? '1' : '0');
       ed.focus();
     });
 
@@ -224,26 +225,26 @@
       if (k === 'bigger' || k === 'smaller') {
         st.size = Math.max(18, Math.min(72, st.size + (k === 'bigger' ? 4 : -4)));
         ed.style.fontSize = st.size + 'px';
-        store.set('cs-edsize', String(st.size));
+        store.set('cs-demo-edsize', String(st.size));
       }
       if (k === 'codes') { st.codes = !st.codes; b.classList.toggle('on', st.codes); renderCodes(); }
       if (k === 'clear') { ed.focus(); ed.select(); document.execCommand('delete'); save(); }
       if (k === 'copy' && window.APP) window.APP.copy(ed.value);
       if (k === 'check' && window.APP) { save(); window.APP.go('proverka'); }
     });
-    ed.focus();
+    if (options.focus !== false) ed.focus();
     ed.setSelectionRange(ed.value.length, ed.value.length);
   }
 
   function append(text) {
     st.text += text;
-    store.set('cs-editor', st.text);
+    store.set('cs-demo-editor', st.text);
     if (ed && document.body.contains(ed)) ed.value = st.text;
   }
   function getText() { return ed && document.body.contains(ed) ? ed.value : st.text; }
-  function setText(text) { st.text = text; store.set('cs-editor', text); }
+  function setText(text) { st.text = text; store.set('cs-demo-editor', text); }
   function getLayout() { return st.layout; }
-  function setLayout(on) { st.layout = !!on; store.set('cs-layout', st.layout ? '1' : '0'); }
+  function setLayout(on) { st.layout = !!on; store.set('cs-demo-layout', st.layout ? '1' : '0'); }
 
   window.KB = { mount, append, attachLayout, charFor, MAP, getText, setText, getLayout, setLayout, insertInto };
 })();

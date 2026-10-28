@@ -8,7 +8,7 @@
     get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* хранилище недоступно */ } }
   };
-  const state = { section: 'azbuka', letter: Number(store.get('cs-letter', 0)) || 0 };
+  const state = { section: 'azbuka', letter: Number(store.get('cs-demo-letter', 0)) || 0 };
 
   /* ---------- уведомление и копирование ---------- */
   let toastTimer = null;
@@ -22,7 +22,20 @@
   async function copy(text) {
     if (!text) return;
     try {
-      if (api) await api.copy(text); else await navigator.clipboard.writeText(text);
+      if (api) await api.copy(text);
+      else {
+        let copied = false;
+        if (navigator.clipboard && window.isSecureContext) {
+          try { await navigator.clipboard.writeText(text); copied = true; } catch (e) {}
+        }
+        if (!copied) {
+          const field = document.createElement('textarea');
+          field.value = text; field.style.cssText = 'position:fixed;top:-1000px';
+          document.body.appendChild(field); field.select();
+          copied = document.execCommand('copy'); field.remove();
+          if (!copied) throw new Error('copy failed');
+        }
+      }
       toast(`Скопировано: <span class="cs">${esc(text.length > 40 ? text.slice(0, 40) + '…' : text)}</span>`);
     } catch (e) { toast('Не удалось скопировать'); }
   }
@@ -119,15 +132,15 @@
   window.SEARCH = { searchIndex, norm, normX };
 
   /* ---------- навигация ---------- */
-  function renderNav() {
-    $('#nav').innerHTML = SECTIONS.map((s) => `<button class="navbtn" data-id="${s.id}"><span class="navicon cs" aria-hidden="true">${s.icon}</span><span class="navtxt">${s.num ? `<span class="navnum">${s.num}</span>` : ''}${esc(s.title)}</span></button>`).join('');
-  }
+  function renderNav() { window.STUDIO.renderNav(); }
   function setActive(id) { $$('.navbtn').forEach((b) => b.classList.toggle('active', b.dataset.id === id)); }
 
   function go(id, target) {
+    if (window.STUDIO.render(id)) { state.section = id; return; }
     const s = SECTIONS.find((x) => x.id === id) || SECTIONS[0];
     state.section = s.id;
-    store.set('cs-section', s.id);
+    window.STUDIO.sync(s.id);
+    store.set('cs-demo-section', s.id);
     $('#search').value = '';
     setActive(s.id);
     renderSection(s);
@@ -175,7 +188,7 @@
 
   /* ---------- конвертер титл ---------- */
   const TC_SAMPLE = 'Сла́ва ѻ҆тцꙋ̀ и҆ сынꙋ̀ и҆ свѧто́мꙋ дꙋ́хꙋ. Пресвѧта́ѧ богоро́дице, спасѝ на́съ.';
-  const tc = { dir: store.get('cs-tc-dir', 'abbr') === 'expand' ? 'expand' : 'abbr', timer: null };
+  const tc = { dir: store.get('cs-demo-tc-dir', 'abbr') === 'expand' ? 'expand' : 'abbr', timer: null };
 
   function titlaConvHTML() {
     const layout = window.KB ? window.KB.getLayout() : true;
@@ -187,7 +200,7 @@
   </div>
   <div class="edbtns">
     <label class="switch"><input type="checkbox" id="tcLayout"${layout ? ' checked' : ''}><span>Славянская раскладка</span></label>
-    <label class="switch" id="tcOptWrap"><input type="checkbox" id="tcOpt"${store.get('cs-tc-opt', '0') === '1' ? ' checked' : ''}><span>Сокращать и <span class="cs">ца́рь, сла́ва, ны́нѣ, при́снѡ</span></span></label>
+    <label class="switch" id="tcOptWrap"><input type="checkbox" id="tcOpt"${store.get('cs-demo-tc-opt', '0') === '1' ? ' checked' : ''}><span>Сокращать и <span class="cs">ца́рь, сла́ва, ны́нѣ, при́снѡ</span></span></label>
   </div>
 </div>
 <div class="tconv-grid">
@@ -225,11 +238,11 @@
   function bindTitlaConv() {
     const inp = $('#tcIn');
     if (!inp) return;
-    inp.value = store.get('cs-tc-text', '') || TC_SAMPLE;
+    inp.value = store.get('cs-demo-tc-text', '') || TC_SAMPLE;
     if (window.KB) window.KB.attachLayout(inp);
     const setDir = (d) => {
       tc.dir = d;
-      store.set('cs-tc-dir', d);
+      store.set('cs-demo-tc-dir', d);
       $$('[data-tdir]').forEach((b) => { const on = b.dataset.tdir === d; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
       $('#tcInTitle').textContent = d === 'abbr' ? 'Текст без титл' : 'Текст с титлами';
       $('#tcOutTitle').textContent = d === 'abbr' ? 'С титлами' : 'Без титл — полностью';
@@ -238,14 +251,14 @@
       runTitlaConv();
     };
     $$('[data-tdir]').forEach((b) => b.addEventListener('click', () => setDir(b.dataset.tdir)));
-    inp.addEventListener('input', () => { store.set('cs-tc-text', inp.value); clearTimeout(tc.timer); tc.timer = setTimeout(runTitlaConv, 120); });
+    inp.addEventListener('input', () => { store.set('cs-demo-tc-text', inp.value); clearTimeout(tc.timer); tc.timer = setTimeout(runTitlaConv, 120); });
     $('#tcLayout').addEventListener('change', (e) => { if (window.KB) window.KB.setLayout(e.target.checked); inp.focus(); });
-    $('#tcOpt').addEventListener('change', (e) => { store.set('cs-tc-opt', e.target.checked ? '1' : '0'); runTitlaConv(); });
+    $('#tcOpt').addEventListener('change', (e) => { store.set('cs-demo-tc-opt', e.target.checked ? '1' : '0'); runTitlaConv(); });
     $('#tcCopy').addEventListener('click', () => copy(tc.last ? tc.last.text : ''));
     $('#tcSwap').addEventListener('click', () => {
       if (!tc.last) return;
       inp.value = tc.last.text;
-      store.set('cs-tc-text', inp.value);
+      store.set('cs-demo-tc-text', inp.value);
       setDir(tc.dir === 'abbr' ? 'expand' : 'abbr');
     });
     setDir(tc.dir);
@@ -312,7 +325,7 @@ ${L.word ? `<div><dt>В слове</dt><dd class="cs">${L.word}</dd></div>` : ''
 
   function selectLetter(i) {
     state.letter = (i + LETTERS.length) % LETTERS.length;
-    store.set('cs-letter', String(state.letter));
+    store.set('cs-demo-letter', String(state.letter));
     $$('.tile').forEach((t) => t.classList.toggle('sel', Number(t.dataset.i) === state.letter));
     renderDetail();
   }
@@ -355,7 +368,7 @@ ${L.word ? `<div><dt>В слове</dt><dd class="cs">${L.word}</dd></div>` : ''
 <div class="edbar">
   <label class="switch"><input type="checkbox" id="chkLayout"${layout ? ' checked' : ''}><span>Славянская раскладка при наборе</span></label>
   <div class="edbtns">
-    <label class="switch"><input type="checkbox" id="chkHints"${store.get('cs-hints', '1') === '1' ? ' checked' : ''}><span>Показывать советы</span></label>
+    <label class="switch"><input type="checkbox" id="chkHints"${store.get('cs-demo-hints', '1') === '1' ? ' checked' : ''}><span>Показывать советы</span></label>
     <button class="btn ghost" id="chkFixAll">Исправить все ошибки</button>
     <button class="btn" id="chkCopy">Копировать текст</button>
   </div>
@@ -451,7 +464,7 @@ ${iss.fixed !== null ? `<span class="arrow" aria-hidden="true">→</span><span c
       chk.timer = setTimeout(runCheck, 200);
     });
     $('#chkLayout').addEventListener('change', (e) => { if (window.KB) window.KB.setLayout(e.target.checked); ed.focus(); });
-    $('#chkHints').addEventListener('change', (e) => { store.set('cs-hints', e.target.checked ? '1' : '0'); runCheck(); });
+    $('#chkHints').addEventListener('change', (e) => { store.set('cs-demo-hints', e.target.checked ? '1' : '0'); runCheck(); });
     $('#chkCopy').addEventListener('click', () => copy(ed.value));
     $('#chkFixAll').addEventListener('click', () => {
       const fixed = window.CHECK.fixAll(ed.value, ['error', 'warn']);
@@ -492,7 +505,7 @@ ${iss.fixed !== null ? `<span class="arrow" aria-hidden="true">→</span><span c
   }
 
   function renderSection(s) {
-    const head = `<header class="sechead"><p class="kicker">${s.num ? 'Раздел ' + s.num : 'Справка'}</p><h1>${esc(s.title)}</h1><p class="lead">${s.lead}</p></header>`;
+    const head = `<header class="sechead"><h1>${esc(s.title)}</h1><p class="lead">${s.lead}</p></header>`;
     let body = '';
     if (s.special === 'alphabet') body = alphabetHTML();
     else if (s.special === 'keyboard') body = '<div id="kbmount"></div>';
@@ -516,6 +529,7 @@ ${iss.fixed !== null ? `<span class="arrow" aria-hidden="true">→</span><span c
   /* ---------- поиск: вывод ---------- */
   function renderSearch(q) {
     if (!q.trim()) { go(state.section); return; }
+    window.STUDIO.sync('search');
     const hits = searchIndex(q);
     setActive(null);
     const sections = hits.filter((h) => h.kind === 'section');
@@ -640,7 +654,7 @@ ${iss.fixed !== null ? `<span class="arrow" aria-hidden="true">→</span><span c
 
   document.body.classList.add('plat-' + (api && api.platform ? api.platform : 'darwin'));
   renderNav();
-  go(store.get('cs-section', 'azbuka'));
+  go(location.hash.slice(1) || 'klaviatura');
   initFont(false);
   setTimeout(() => { if (DICT()) DICT().load(); }, 600);
   setTimeout(() => { if (window.SPELL) window.SPELL.load(); }, 1500);
