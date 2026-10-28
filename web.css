@@ -1,0 +1,44 @@
+/* Веб-версия: без заголовка окна macOS, меню разделов на узком экране */
+.web .side { padding-top: 16px; }
+.web .drag, .web .topdrag { display: none; }
+.web .content { padding-top: 26px; }
+.drawer { display: flex; flex-direction: column; gap: 14px; flex: 1 0 auto; }
+.menu-btn { display: none; }
+.install-btn { align-self: flex-start; margin: 0 4px; }
+.update-bar { position: fixed; left: 50%; bottom: 18px; z-index: 50; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: 0 8px 28px rgba(0, 0, 0, .18); font-size: 13.5px; white-space: nowrap; }
+
+@media (max-width: 820px) {
+  .web .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: 100vh; height: 100dvh; }
+  .web .side { z-index: 20; gap: 10px; padding: 10px 14px; border-right: 0; border-bottom: 1px solid var(--line); overflow: visible; }
+  .brand { gap: 10px; padding: 0; }
+  .brand-glyph { width: 36px; height: 36px; border-radius: 9px; font-size: 24px; padding-top: 5px; }
+  .brand-title { font-size: 15px; }
+  .brand-sub { font-size: 11px; }
+  .menu-btn { display: inline-grid; place-items: center; flex: none; width: 42px; height: 42px; margin-left: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); cursor: pointer; }
+  .nav-open .menu-btn { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .search { height: 40px; margin: 0; }
+  .search input { font-size: 16px; }
+  .drawer { display: none; position: absolute; top: 100%; left: 0; right: 0; max-height: calc(100vh - 120px); max-height: calc(100dvh - 120px); overflow-y: auto; gap: 10px; padding: 8px 10px 16px; background: var(--side); border-bottom: 1px solid var(--line); box-shadow: 0 16px 30px rgba(0, 0, 0, .18); }
+  .nav-open .drawer { display: flex; }
+  .fontstatus { margin-top: 4px; }
+
+  .web .content { padding: 18px 16px 56px; }
+  .sechead { padding-bottom: 16px; margin-bottom: 20px; }
+  .sechead h1 { font-size: 31px; }
+  .lead { font-size: 15px; }
+  .ghead h2 { font-size: 22px; }
+  .group { margin-bottom: 28px; }
+  .card { padding: 14px 15px; }
+  .web .grid, .web .grid[style] { --cols: 1 !important; }
+  .mark.cs { font-size: 46px; }
+  .pair, .conv, .dict-body, .dict-hits, .chk-dict-list { grid-template-columns: minmax(0, 1fr); }
+  .detail { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
+  .cases { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .iss { grid-template-columns: 80px minmax(0, 1fr) auto; }
+  .numtable, .scrollx { overflow-x: auto; }
+  .tscroll { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tscroll > table { min-width: 100%; }
+  .fx-bar .search.infind, .dict-bar .search.infind { flex: 1 1 100%; min-width: 0; max-width: none; }
+  .seg { display: flex; flex-wrap: wrap; max-width: 100%; }
+  .segbtn { flex: 1 1 auto; }
+}
