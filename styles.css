@@ -379,3 +379,9 @@ kbd { display: inline-block; min-width: 20px; padding: 0 5px; border: 1px solid 
 .fx-notes { margin: 0; padding: 12px 16px 12px 32px; background: var(--panel); border: 1px dashed var(--line); border-radius: 12px; font-size: 13px; color: var(--muted); line-height: 1.5; }
 .fx-notes li + li { margin-top: 4px; }
 .fx-note { margin: 4px 0 0; }
+
+/* ---------- перевод из старых кодировок, словарь SCI ---------- */
+.legacy { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 10px; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; background: var(--panel); font-size: 13.5px; }
+.legacy-msg { font-weight: 600; }
+.legacy-enc { max-width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--ink); font: 13px var(--ui); }
+.iss .acts .alt .cs { font-size: 16px; font-weight: 400; }

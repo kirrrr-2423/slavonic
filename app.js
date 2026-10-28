@@ -407,7 +407,7 @@ ${L.word ? `<div><dt>В слове</dt><dd class="cs">${L.word}</dd></div>` : ''
 <span class="w cs">${esc(iss.word)}</span>
 ${iss.fixed !== null ? `<span class="arrow" aria-hidden="true">→</span><span class="w cs fixw">${esc(iss.fixed)}</span>` : ''}
 <span class="msg">${esc(iss.msg)}</span>
-<span class="acts">${iss.fixed !== null ? `<button class="btn small" data-fix="${k}">Исправить</button>` : ''}<button class="btn ghost small" data-show="${k}">Показать</button></span></li>`).join('')
+<span class="acts">${iss.fixed !== null ? `<button class="btn small" data-fix="${k}">Исправить</button>` : ''}${iss.fixed === null && iss.alts ? iss.alts.map((a) => `<button class="btn ghost small alt" data-alt="${k}" data-v="${esc(a)}"><span class="cs">${esc(a)}</span></button>`).join('') : ''}<button class="btn ghost small" data-show="${k}">Показать</button></span></li>`).join('')
       + (chk.issues.length > shown.length ? `<li class="gl">…и ещё ${chk.issues.length - shown.length}</li>` : '');
     renderChkDict(text);
   }
@@ -473,18 +473,21 @@ ${iss.fixed !== null ? `<span class="arrow" aria-hidden="true">→</span><span c
     $('#chkList').addEventListener('click', (e) => {
       const s = e.target.closest('[data-show]');
       if (s) { showIssue(Number(s.dataset.show)); return; }
-      const f = e.target.closest('[data-fix]');
+      const f = e.target.closest('[data-fix], [data-alt]');
       if (f) {
-        const iss = chk.issues[Number(f.dataset.fix)];
-        if (!iss || iss.fixed === null) return;
+        const iss = chk.issues[Number(f.dataset.fix !== undefined ? f.dataset.fix : f.dataset.alt)];
+        const val = f.dataset.alt !== undefined ? f.dataset.v : iss && iss.fixed;
+        if (!iss || val === null || val === undefined) return;
         ed.focus();
         ed.setSelectionRange(iss.start, iss.end);
-        if (!document.execCommand('insertText', false, iss.fixed)) {
-          ed.setRangeText(iss.fixed, iss.start, iss.end, 'end');
+        if (!document.execCommand('insertText', false, val)) {
+          ed.setRangeText(val, iss.start, iss.end, 'end');
           ed.dispatchEvent(new Event('input'));
         }
       }
     });
+    if (window.LEGACY) window.LEGACY.attach(ed, (enc) => toast(`Текст переведён из ${window.LEGACY.SHORT[enc]} в Юникод`));
+    if (window.SPELL && !window.SPELL.ready) { window.SPELL.load(); window.SPELL.onReady((ok) => { if (ok && $('#chkEd') === ed) runCheck(); }); }
     runCheck();
   }
 
@@ -498,7 +501,10 @@ ${iss.fixed !== null ? `<span class="arrow" aria-hidden="true">→</span><span c
     if (s.groups) body += s.groups.map((g, gi) => groupHTML(s, g, gi)).join('');
     $('#content').innerHTML = head + body;
     if (s.special === 'alphabet') renderDetail();
-    if (s.special === 'keyboard' && window.KB) window.KB.mount($('#kbmount'));
+    if (s.special === 'keyboard' && window.KB) {
+      window.KB.mount($('#kbmount'));
+      if (window.LEGACY) window.LEGACY.attach($('#kbEd'), (enc) => toast(`Текст переведён из ${window.LEGACY.SHORT[enc]} в Юникод`));
+    }
     if (s.special === 'checker') bindChecker();
     if (s.special === 'dictionary' && DICT()) { DICT().mount($('#dictmount'), dictOpts || {}); dictOpts = null; }
     bindConverter();
@@ -637,4 +643,5 @@ ${iss.fixed !== null ? `<span class="arrow" aria-hidden="true">→</span><span c
   go(store.get('cs-section', 'azbuka'));
   initFont(false);
   setTimeout(() => { if (DICT()) DICT().load(); }, 600);
+  setTimeout(() => { if (window.SPELL) window.SPELL.load(); }, 1500);
 })();

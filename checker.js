@@ -1,5 +1,5 @@
 'use strict';
-/* Проверка правописания по правилам справочника. Словаря нет: проверяются правила, а не существование слов. */
+/* Проверка правописания: правила справочника и, когда загружен, словарь SCI (spell.js). */
 (() => {
   const PSILI = '҆', OXIA = '́', VARIA = '̀', KAMORA = '̑', TITLO = '҃', POKR = '҇', THOUS = '҂';
   const VOWELS = new Set('аеєиіїоѻѡѽуꙋюꙗѧѣыэяѵѷᲂ');
@@ -80,7 +80,9 @@
           if (fixed === tok.text) fixed = null;
         }
         issues.push({ sev, rule, msg, start: tok.start, end: tok.end, word: tok.text, fixed });
+        return issues[issues.length - 1];
       };
+      const before = issues.length;
 
       if (tok.text === '?') { add('error', 'punct', 'Вопросительный знак в церковнославянском — «;»', () => ';'); continue; }
       if (/^\d+$/.test(tok.text)) {
@@ -203,6 +205,19 @@
       }
       if (stressIdx.length === 0 && vowelCount >= 2 && !hasTitlo && !ENCL.has(base)) add('hint', 'no-stress', 'Нет знака ударения', null);
       if (stressIdx.length > 1) add('hint', 'two-stress', 'В слове больше одного знака ударения', null);
+
+      // словарь SCI: только если правила к слову претензий не имеют
+      const SP = window.SPELL;
+      if (SP && SP.ready && !issues.slice(before).some((i) => i.sev !== 'hint') && SP.has(tok.text) === false) {
+        const sug = SP.suggest(tok.text);
+        if (sug.length) {
+          const iss = add('warn', 'spell', `В словаре SCI: ${sug.join(', ')}`, sug.length === 1 ? () => sug[0] : null);
+          iss.noAuto = true;
+          iss.alts = sug;
+        } else {
+          add('hint', 'unknown', 'Этого слова нет в словаре SCI (в нём есть не все формы слов)', null);
+        }
+      }
     }
     const order = { error: 0, warn: 1, hint: 2 };
     issues.sort((a, b) => a.start - b.start || order[a.sev] - order[b.sev]);
@@ -212,7 +227,7 @@
   function fixAll(text, sevs) {
     let t = text;
     for (let guard = 0; guard < 500; guard++) {
-      const iss = check(t).find((i) => i.fixed !== null && sevs.includes(i.sev));
+      const iss = check(t).find((i) => i.fixed !== null && !i.noAuto && sevs.includes(i.sev));
       if (!iss) break;
       t = t.slice(0, iss.start) + iss.fixed + t.slice(iss.end);
     }

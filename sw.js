@@ -1,10 +1,10 @@
 'use strict';
 /* Работа без интернета: все файлы программы хранятся в кэше браузера.
    Версия меняется при каждой сборке — тогда браузер скачивает новые файлы. */
-const VERSION = '035ab2b264a8';
+const VERSION = '5d31c5b2672e';
 const CACHE = 'cs-app-' + VERSION;
 const FONTS = 'cs-fonts';
-const ASSETS = ["./", "app.js", "checker.js", "data.js", "dictionary.js", "fonts/FreeSerif.woff", "forms.js", "icons/apple-touch-icon.png", "icons/favicon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-192.png", "icons/maskable-512.png", "index.html", "keyboard.js", "manifest.webmanifest", "slovar-data.js", "styles.css", "titla.js", "web.css", "web.js"];
+const ASSETS = ["./", "app.js", "checker.js", "data.js", "dictionary.js", "fonts/FreeSerif.woff", "forms.js", "icons/apple-touch-icon.png", "icons/favicon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-192.png", "icons/maskable-512.png", "index.html", "keyboard.js", "legacy-data.js", "legacy.js", "manifest.webmanifest", "slovar-data.js", "spell-data.js", "spell.js", "styles.css", "titla.js", "web.css", "web.js"];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
