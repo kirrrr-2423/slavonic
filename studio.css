@@ -31,6 +31,46 @@ html,body{height:auto;min-height:100%;overflow:auto}body{font-size:14px;line-hei
 }
 @media(max-width:720px){.studio-side #nav{flex-direction:row;align-items:center;gap:4px}.studio-side .studio-brand{padding-bottom:16px}.studio-side .studio-link{margin-bottom:0}.studio-side .studio-link span{flex-shrink:0}}
 .review-issue{scroll-margin:16px}.review-issue.issue-target{border-color:var(--accent);background:var(--tint)}
+/* Слова под титлом находятся рядом с клавиатурой, проверка — рядом с текстом. */
+.workbench{row-gap:20px;grid-template-rows:auto auto}
+.writing-column{display:block;grid-column:1;grid-row:1 / span 2}
+.keyboard-area{min-width:0;margin-top:20px}
+.keyboard-area .keyboard-heading{margin-top:0}
+.workbench .review-rail{grid-column:2;grid-row:1;height:var(--editor-height,340px);min-height:340px;display:flex;flex-direction:column;overflow:hidden}
+.review-rail .rail-tabs,.review-rail .rail-footer{flex-shrink:0}
+.review-rail #railBody{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin}
+.review-rail .issue-list{max-height:none;overflow:visible}
+.workbench .titla-drawer{grid-column:2;grid-row:2;margin:0;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);min-width:0}
+.titla-drawer summary{font:12px/1.5 var(--ui);color:var(--muted)}
+.titla-inserts{grid-template-columns:repeat(2,minmax(0,1fr));max-height:calc(var(--titla-height,400px) - 56px);min-height:100px;overflow-y:auto;scrollbar-width:thin;padding:2px 4px 4px;margin-top:10px;gap:6px}
+.titla-card{position:relative;min-width:0;border:1px solid var(--line);border-radius:4px;background:var(--bg)}
+.titla-inserts .titla-word{width:100%;min-height:76px;border:0;background:transparent;padding:8px 5px 19px;gap:1px;min-width:0;color:var(--ink)}
+.titla-word .cs{font-size:27px;line-height:1.5;overflow-wrap:anywhere}
+.titla-word span:not(.cs){font:10px/1.4 var(--ui);color:var(--muted)}
+.titla-card:hover{border-color:var(--accent)}
+.dictionary-link{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:30px;height:30px;padding:6px;border:0;border-radius:4px;background:transparent;color:var(--faint)}
+.dictionary-link svg{width:16px;height:16px}
+.dictionary-link:hover{color:var(--accent);background:var(--tint)}
+.titla-inserts .dictionary-link{position:absolute;bottom:1px;right:1px;width:25px;height:25px;padding:5px;border:0;background:transparent}
+.issue-heading-row{display:flex;align-items:center}
+.issue-heading-row .issue-heading{flex:1;min-width:0;padding-right:4px;grid-template-columns:58px minmax(0,1fr) 12px}
+.issue-heading-row>.dictionary-link{margin-right:5px}
+.replacement-row{display:flex;align-items:stretch;gap:4px;margin-bottom:6px}
+.replacement-row .replacement{min-width:0;flex:1;margin:0;gap:6px;padding-left:8px;padding-right:8px}
+.replacement-row .replacement>.cs{overflow-wrap:anywhere}
+.replacement-row .replacement>span:last-child{flex-shrink:0;font-size:9px}
+.replacement-row>.dictionary-link{align-self:center}
+.issue-detail p>.cs{font-size:1.35em;line-height:1.65;color:var(--ink)}
+.lookup-row #wordLookup{font-family:var(--csfont);font-size:27px;line-height:1.7;padding:3px 0;min-height:44px}
+.lookup-row #wordLookup::placeholder{font:11px var(--ui);color:var(--faint)}
+@media(max-width:1040px){
+ .workbench{grid-template-columns:minmax(0,1fr);grid-template-rows:none}
+ .writing-column{grid-column:1;grid-row:auto}
+ .workbench .paper,.keyboard-area,.workbench .review-rail,.workbench .titla-drawer{grid-column:1;grid-row:auto}
+ .workbench .review-rail{height:auto;min-height:0;max-height:520px}
+ .review-rail #railBody{overflow-y:auto}
+ .titla-inserts{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));max-height:340px}
+}
 /* Практика: структура учебников, без декоративных надзаголовков. */
 .practice-library{max-width:1020px}.practice-books{display:flex;gap:12px;margin:8px 0 24px}.practice-books button{flex:1;text-align:left;border:1px solid var(--line);border-radius:5px;background:transparent;color:var(--muted);padding:16px 18px}.practice-books button[aria-pressed=true]{border-color:var(--accent);background:var(--panel);color:var(--ink)}.practice-books strong{display:block;font:500 19px/1.3 var(--serif);margin-bottom:5px}.practice-books span{font-size:11px;color:var(--muted)}.practice-list-info{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px;font-size:11px;color:var(--muted)}.lesson-list{border-top:1px solid var(--line)}.lesson-row{width:100%;display:flex;align-items:center;gap:20px;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:19px 4px;color:var(--ink)}.lesson-row:hover{background:var(--panel)}.lesson-number{width:32px;flex-shrink:0;font:14px var(--serif);color:var(--faint)}.lesson-label{flex:1;min-width:0}.lesson-label strong{font:500 20px/1.3 var(--serif)}.lesson-label small{display:block;font-size:12px;color:var(--muted);margin-top:5px}.lesson-state{font-size:11px;color:var(--muted);white-space:nowrap}.lesson-state.completed{color:var(--good)}.lesson-arrow{font-size:20px;color:var(--accent);padding-left:8px}.practice-source-note{color:var(--muted);font-size:11px;line-height:1.7;margin-top:24px}.lesson-navigation{display:flex;justify-content:space-between;gap:16px;margin:0 0 20px}.lesson-source{display:flex;align-items:baseline;gap:16px;justify-content:space-between;border-bottom:1px solid var(--line);padding:0 0 20px;margin-top:-8px;color:var(--muted);font-size:12px}.lesson-source>span{max-width:720px;line-height:1.6}.lesson-source>a{white-space:nowrap;font-size:11px;text-decoration:none}.lesson-source>a:hover{text-decoration:underline}.textbook-exercise{max-width:740px;margin:28px auto 0}.textbook-exercise .practice-progress{margin-bottom:24px}.question-stimulus{display:block;font-size:68px;color:var(--accent);line-height:1.6;overflow-wrap:anywhere;margin-bottom:16px}.question-stimulus.long{font-size:38px;line-height:1.75}.textbook-question h2{font-size:25px;margin-top:8px}.textbook-question .quiz-options .answer-label{font-size:14px;color:inherit}.textbook-question .quiz-options .answer-label.cs{font-size:25px;line-height:1.5}.textbook-question .quiz-options button{min-height:62px}.feedback-actions{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:18px}.exercise-basis{font-size:11px;color:var(--faint);line-height:1.7;margin-top:20px}.lesson-finish-actions{display:flex;justify-content:center;align-items:center;gap:24px;flex-wrap:wrap}.textbook-exercise .quiz-complete{padding:24px 0}.textbook-exercise .quiz-review button>span:nth-child(2){flex:1}.textbook-exercise .practice-top>span:last-child{font-size:11px}
 @media(max-width:720px){.practice-books{flex-direction:column;gap:8px;margin-top:0}.practice-books button{padding:12px 14px}.practice-books strong{font-size:18px}.practice-list-info{flex-wrap:wrap;gap:4px;font-size:10px}.lesson-row{gap:12px;padding:16px 0;flex-wrap:wrap}.lesson-number{width:22px;font-size:12px}.lesson-label strong{font-size:18px}.lesson-label small{font-size:11px}.lesson-state{font-size:10px;margin-left:34px}.lesson-arrow{font-size:17px;padding:0;margin-left:auto}.lesson-source{display:block;font-size:11px;margin-top:-4px}.lesson-source>a{display:inline-block;margin-top:10px}.lesson-navigation .quiet{font-size:11px}.textbook-exercise{margin-top:24px}.textbook-exercise .practice-top{gap:16px;font-size:11px}.textbook-exercise .practice-top>span:last-child{font-size:9px;text-align:right}.question-stimulus{font-size:52px}.question-stimulus.long{font-size:29px}.textbook-question h2{font-size:22px}.textbook-question .quiz-options button{min-height:54px}.textbook-question .quiz-options .answer-label{font-size:13px}.exercise-basis{font-size:10px}.feedback-actions{gap:16px}.feedback-actions .quiet{font-size:11px}}

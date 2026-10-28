@@ -1,0 +1,40 @@
+.rule-popup{width:min(720px,calc(100vw - 40px));max-width:none;max-height:min(780px,calc(100dvh - 48px));margin:auto;padding:0;overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);box-shadow:0 24px 90px #211b2440;font-family:var(--ui)}
+.rule-popup::backdrop{background:#211b2466;backdrop-filter:blur(3px)}
+.rule-popup-shell{display:flex;flex-direction:column;max-height:inherit;min-height:0}
+.rule-popup-head{display:flex;align-items:start;gap:24px;padding:25px 32px 22px;border-bottom:1px solid var(--line2);flex-shrink:0}
+.rule-popup-head h2{flex:1;min-width:0;margin:2px 0 0;font:500 clamp(25px,4vw,32px)/1.25 var(--serif);text-wrap:balance}
+.rule-popup-close{display:grid;place-items:center;flex-shrink:0;width:36px;height:36px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--muted);font:28px/1 var(--ui);cursor:pointer}
+.rule-popup-close:hover{color:var(--accent);background:var(--tint)}
+.rule-popup-scroll{min-height:0;overflow:auto;overscroll-behavior:contain;padding:25px 32px 30px;scrollbar-gutter:stable}
+.rule-popup-context{display:flex;align-items:center;gap:24px;margin-bottom:22px;padding:0 0 20px;border-bottom:1px solid var(--line2);flex-wrap:wrap}
+.rule-popup-context>div{min-width:0;flex:1;overflow-wrap:anywhere}
+.rule-popup-context>div>span{display:block;font:12px/1.4 var(--ui);color:var(--muted);margin-bottom:6px}
+.rule-popup-context strong{display:block;font:400 clamp(30px,5vw,42px)/1.6 var(--csfont);color:var(--ink)}
+.rule-popup-arrow{font-size:23px;color:var(--muted)}
+.rule-popup-explanation{font:14px/1.75 var(--ui);color:var(--muted)}
+.rule-popup p{margin:0 0 12px;overflow-wrap:anywhere}
+.rule-popup-explanation .cs{font-family:var(--csfont);font-size:1.3em;line-height:1.4;color:var(--ink)}
+.rule-popup-block{margin-top:22px;padding-top:22px;border-top:1px solid var(--line2);font:15px/1.65 var(--ui);overflow-wrap:anywhere}
+.rule-popup h3{margin:0 0 14px;font:500 21px/1.35 var(--serif);color:var(--ink)}
+.rule-popup h3>span{display:block;font:12px/1.5 var(--ui);color:var(--muted);margin-top:3px}
+.rule-popup-block p .cs{font:400 1.3em/1.4 var(--csfont)}
+.rule-popup-block .mark{font:400 62px/1.45 var(--csfont);margin:0 0 12px;color:var(--accent)}
+.rule-popup-block .exs{display:flex;flex-direction:column;gap:7px;margin:8px 0 16px}
+.rule-popup-block .ex{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
+.rule-popup-block .ex .cs{font:400 28px/1.6 var(--csfont)}
+.rule-popup-block .gl{font:12px/1.5 var(--ui);color:var(--muted)}
+.rule-popup-block .tbl{width:100%;border-collapse:collapse;font:13px/1.6 var(--ui)}
+.rule-popup-block .tbl td,.rule-popup-block .tbl th{padding:10px 8px;text-align:left;border-bottom:1px solid var(--line2);vertical-align:top}
+.rule-popup-block .tbl .cs{font:400 25px/1.6 var(--csfont)}
+.rule-popup-block .tbl .sign{font-size:36px}
+.rule-popup-block .pair{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.rule-popup-block .pair>div{display:flex;flex-direction:column;gap:8px}
+.rule-popup-block .pair .cs{font:400 38px/1.5 var(--csfont)}
+.rule-popup-variants{margin-top:22px;padding-top:20px;border-top:1px solid var(--line2)}
+.rule-popup-variants ul{display:flex;flex-wrap:wrap;gap:12px 24px;padding:0;margin:0;list-style:none}
+.rule-popup-variants li{font:400 32px/1.7 var(--csfont);color:var(--accent);overflow-wrap:anywhere}
+.rule-popup-note{font:12px/1.6 var(--ui);color:var(--muted);margin-top:22px!important}
+.rule-popup-foot{flex-shrink:0;border-top:1px solid var(--line2);padding:16px 32px;background:var(--panel);font:11px/1.5 var(--ui);color:var(--muted)}
+.rule-popup :focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.rule-popup-scroll:focus-visible{outline-offset:-3px}
+@media(max-width:600px){.rule-popup{width:calc(100vw - 24px);max-height:calc(100dvh - 24px);border-radius:8px}.rule-popup-head{padding:20px;gap:12px}.rule-popup-head h2{font-size:26px}.rule-popup-scroll{padding:20px}.rule-popup-context{gap:12px}.rule-popup-context strong{font-size:32px}.rule-popup-explanation{font-size:13px}.rule-popup-block{font-size:14px}.rule-popup-block .ex .cs{font-size:25px}.rule-popup-block .tbl{font-size:12px}.rule-popup-block .tbl td,.rule-popup-block .tbl th{padding:8px 4px}.rule-popup-block .tbl .cs{font-size:22px}.rule-popup-foot{padding:14px 20px;font-size:10px}}

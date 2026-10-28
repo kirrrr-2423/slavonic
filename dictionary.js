@@ -26,6 +26,27 @@
     const t = stripTags(html).replace(/\s+/g, ' ').trim();
     return t.length > n ? t.slice(0, n).replace(/\s+\S*$/, '') + '…' : t;
   };
+  // Оба представления статьи используют одни данные и разрешённую разметку словаря.
+  function articleBody(html) {
+    const source = document.createElement('template');
+    source.innerHTML = String(html);
+    const allowed = new Set(['P', 'B', 'I', 'EM', 'STRONG', 'SPAN', 'SUP', 'SUB', 'BR']);
+    const copy = (node) => {
+      if (node.nodeType === 3) return document.createTextNode(node.nodeValue);
+      if (node.nodeType !== 1 || ['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT'].includes(node.tagName)) return document.createDocumentFragment();
+      const target = allowed.has(node.tagName) ? document.createElement(node.tagName.toLowerCase()) : document.createDocumentFragment();
+      if (target.nodeType === 1) {
+        const classes = Array.from(node.classList).filter((name) => name === 'csq' || name === 'sn');
+        if (classes.length) target.className = classes.join(' ');
+      }
+      node.childNodes.forEach((child) => target.appendChild(copy(child)));
+      return target;
+    };
+    const output = document.createElement('div');
+    source.content.childNodes.forEach((node) => output.appendChild(copy(node)));
+    return output.innerHTML;
+  }
+  const articleText = (entry) => `${entry[0]} (${entry[1]}) — ${stripTags(entry[2].replace(/<\/p>/g, ' ')).replace(/\s+/g, ' ').trim()}`;
   const add = (map, k, i) => {
     if (!k) return;
     if (!map.has(k)) map.set(k, []);
@@ -152,9 +173,15 @@
     if (!D.ready) return null;
     let k = keyOf(word, true);
     if (!k || k.length < 2) return null;
-    const plain = S().norm(word).replace(/[^\p{L}]/gu, '');
-    if (titlaMap().has(plain)) k = keyOf(titlaMap().get(plain));
-    else if (/[\u0483\u0487\u2DE0-\u2DFF]/.test(word) && titlaMap.st.has(tStem(plain))) k = keyOf(titlaMap.st.get(tStem(plain)));
+    // Конвертер знает сокращённые основы и производные (бл҃гослови́ → благослови́).
+    // Раскрытие не делает совпадение по основе точной словарной статьёй.
+    const expanded = window.TITLA_CONV?.expandWord?.(word);
+    if (expanded?.out) k = keyOf(expanded.out, true);
+    else {
+      const plain = S().norm(word).replace(/[^\p{L}]/gu, '');
+      if (titlaMap().has(plain)) k = keyOf(titlaMap().get(plain));
+      else if (/[\u0483\u0487\u2DE0-\u2DFF]/.test(word) && titlaMap.st.has(tStem(plain))) k = keyOf(titlaMap.st.get(tStem(plain)));
+    }
     const ir = IRREG[k.split(' ')[0]];
     if (ir && D.byKey.has(ir)) return { items: D.byKey.get(ir).slice(0, 3), exact: true };
     const w = k.split(' ')[0];
@@ -243,7 +270,7 @@
     art.innerHTML = `<p class="kicker">Буква <span class="cs">${esc(D.letterOf[i] || '')}</span> · ${num(i + 1)} из ${num(D.e.length)}</p>
 <h2 class="dict-hw cs" data-copy="${esc(cs)}" title="Нажмите, чтобы скопировать">${esc(cs)}</h2>
 <p class="dict-tr">${esc(tr)}</p>
-<div class="dict-text">${b}</div>
+<div class="dict-text">${articleBody(b)}</div>
 <div class="dict-acts"><button class="btn ghost small" data-dnav="-1"${prev ? '' : ' disabled'} aria-label="Предыдущее слово">← <span class="cs">${prev ? esc(prev[0]) : ''}</span></button><button class="btn ghost small" data-dcopy>Копировать статью</button><button class="btn ghost small" data-dnav="1"${next ? '' : ' disabled'} aria-label="Следующее слово"><span class="cs">${next ? esc(next[0]) : ''}</span> →</button></div>`;
     highlight(art.querySelector('.dict-text'));
     art.scrollTop = 0;
@@ -334,7 +361,7 @@
       if (e.target.closest('[data-dcopy]')) {
         const i = Number(root.querySelector('#dictArt').dataset.di);
         const en = D.e[i];
-        if (en && window.APP) window.APP.copy(`${en[0]} (${en[1]}) — ${stripTags(en[2].replace(/<\/p>/g, ' ')).replace(/\s+/g, ' ').trim()}`);
+        if (en && window.APP) window.APP.copy(articleText(en));
       }
     });
     update(opts.open);
@@ -350,8 +377,124 @@
     return i === undefined ? null : D.e[i][0];
   }
 
+  /* Полная статья поверх текущего раздела; состояние редактора и словаря не меняется. */
+  const popup = { dialog: null, index: -1, returnFocus: null, selection: null, ranges: [], request: 0 };
+
+  function makePopup() {
+    if (popup.dialog) return popup.dialog;
+    const dialog = document.createElement('dialog');
+    dialog.className = 'dictionary-popup';
+    dialog.setAttribute('aria-labelledby', 'dictionaryPopupTitle');
+    dialog.setAttribute('aria-describedby', 'dictionaryPopupTranscription');
+    dialog.innerHTML = `<div class="dictionary-popup-shell">
+<header class="dictionary-popup-head"><div><h2 id="dictionaryPopupTitle" class="cs"></h2><p id="dictionaryPopupTranscription"></p></div><button type="button" class="dictionary-popup-close" aria-label="Закрыть словарную статью" autofocus>×</button></header>
+<div class="dictionary-popup-scroll" tabindex="0" role="region" aria-label="Толкование слова"><div class="dict-text"></div></div>
+<footer class="dictionary-popup-foot"><button type="button" class="btn ghost small" data-popup-copy>Копировать статью</button><button type="button" class="btn small" data-popup-close>Закрыть</button></footer>
+</div>`;
+    const close = () => dialog.close();
+    dialog.querySelector('.dictionary-popup-close').addEventListener('click', close);
+    dialog.querySelector('[data-popup-close]').addEventListener('click', close);
+    dialog.querySelector('[data-popup-copy]').addEventListener('click', () => {
+      if (D.e[popup.index] && window.APP) window.APP.copy(articleText(D.e[popup.index]));
+    });
+    dialog.addEventListener('click', (event) => {
+      const entry = event.target.closest('[data-popup-entry]');
+      if (!entry) return;
+      showPopupArticle(Number(entry.dataset.popupEntry));
+      dialog.querySelector('.dictionary-popup-close').focus({ preventScroll: true });
+    });
+    let pressedOutside = false;
+    const outside = (event) => {
+      const box = dialog.getBoundingClientRect();
+      return event.target === dialog && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom);
+    };
+    dialog.addEventListener('pointerdown', (event) => { pressedOutside = outside(event); });
+    dialog.addEventListener('click', (event) => { if (pressedOutside && outside(event)) close(); pressedOutside = false; });
+    dialog.addEventListener('close', () => {
+      const target = popup.returnFocus;
+      if (target?.isConnected) {
+        target.focus({ preventScroll: true });
+        if (popup.selection && typeof target.setSelectionRange === 'function') {
+          target.setSelectionRange(...popup.selection);
+        }
+      }
+      const ranges = popup.ranges.filter((range) => range.startContainer.isConnected && range.endContainer.isConnected);
+      if (ranges.length) {
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        ranges.forEach((range) => selection.addRange(range));
+      }
+      popup.returnFocus = null;
+      popup.selection = null;
+      popup.ranges = [];
+    });
+    document.body.appendChild(dialog);
+    popup.dialog = dialog;
+    return dialog;
+  }
+
+  function showPopupArticle(index) {
+    if (!D.e[index]) return;
+    const dialog = makePopup();
+    const [cs, tr, body] = D.e[index];
+    popup.index = index;
+    dialog.querySelector('#dictionaryPopupTitle').textContent = cs;
+    dialog.querySelector('#dictionaryPopupTranscription').textContent = tr;
+    dialog.querySelector('.dict-text').innerHTML = articleBody(body);
+    dialog.querySelector('[data-popup-copy]').hidden = false;
+    dialog.querySelector('.dictionary-popup-scroll').scrollTop = 0;
+  }
+
+  function showPopupResults(query, result, failed) {
+    const dialog = makePopup();
+    const items = (result?.items || []).slice(0, 12);
+    popup.index = -1;
+    dialog.querySelector('#dictionaryPopupTitle').textContent = query;
+    dialog.querySelector('#dictionaryPopupTranscription').textContent = failed ? 'Не удалось загрузить словарь' : items.length ? 'Выберите словарную статью' : 'Статья не найдена';
+    const explanation = failed ? 'Проверьте, доступен ли файл словаря, и попробуйте ещё раз.'
+      : !items.length ? 'В словаре Дьяченко не нашлось статьи для этого слова. Попробуйте начальную форму или поиск по тексту толкований в полном словаре.'
+        : result.exact ? 'Для этого слова есть несколько статей.' : 'Точной статьи для этой формы нет. Ниже — возможные совпадения по основе слова.';
+    dialog.querySelector('.dict-text').innerHTML = `<p class="dictionary-popup-message">${esc(explanation)}</p>`
+      + items.map((i) => { const [cs, tr, body] = D.e[i]; return `<button type="button" class="dictionary-popup-match" data-popup-entry="${i}"><span class="cs">${esc(cs)}</span><span>${esc(tr)}</span><small>${esc(preview(body, 120))}</small></button>`; }).join('');
+    dialog.querySelector('[data-popup-copy]').hidden = true;
+    dialog.querySelector('.dictionary-popup-scroll').scrollTop = 0;
+  }
+
+  async function openPopup(entryOrQuery) {
+    if (typeof entryOrQuery !== 'number' && typeof entryOrQuery !== 'string') return false;
+    const request = ++popup.request;
+    const returnFocus = document.activeElement;
+    const selection = typeof returnFocus?.selectionStart === 'number'
+      ? [returnFocus.selectionStart, returnFocus.selectionEnd, returnFocus.selectionDirection || 'none'] : null;
+    const selectedText = window.getSelection();
+    const ranges = selectedText && !selectedText.isCollapsed
+      ? Array.from({ length: selectedText.rangeCount }, (_, i) => selectedText.getRangeAt(i).cloneRange()) : [];
+    const ready = D.ready || await load();
+    if (request !== popup.request) return false;
+    let index = entryOrQuery;
+    let result = null;
+    if (typeof index === 'string') {
+      const query = index.trim();
+      if (!query) return false;
+      result = ready ? lookupWord(query) : null;
+      if (ready && !result) result = { items: find(query).items, exact: false };
+      index = result?.exact && result.items.length === 1 ? result.items[0] : null;
+      if (index === null) showPopupResults(query, result, !ready);
+    }
+    if (index !== null && (!Number.isInteger(index) || !D.e[index])) return false;
+    const dialog = makePopup();
+    if (index !== null) showPopupArticle(index);
+    if (!dialog.open) {
+      popup.returnFocus = returnFocus;
+      popup.selection = selection;
+      popup.ranges = ranges;
+      dialog.showModal();
+    }
+    return true;
+  }
+
   window.DICT = {
-    load, onReady, find, lookupWord, mount, preview, csForm,
+    load, onReady, find, lookupWord, mount, preview, csForm, openPopup,
     get ready() { return D.ready; },
     get failed() { return D.failed; },
     get size() { return D.e.length; },

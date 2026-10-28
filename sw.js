@@ -1,10 +1,11 @@
 'use strict';
 // Generated from every packaged runtime asset, including the worker lifecycle template.
-const VERSION = '91f1222faabdafd1';
+const VERSION = '283f1f6cb22ac350';
 const PRECACHE = [
   "app.js",
   "checker.js",
   "data.js",
+  "dictionary-popup.css",
   "dictionary.js",
   "fonts/FreeSerif-LICENSE.txt",
   "fonts/FreeSerif.woff",
@@ -27,6 +28,8 @@ const PRECACHE = [
   "practice.js",
   "pwa.css",
   "pwa.js",
+  "rule-popup.css",
+  "rule-popup.js",
   "slovar-data.js",
   "spell-data.js",
   "spell.js",
