@@ -180,6 +180,31 @@
   const RAW = { ꙋ: 'у', ѡ: 'о', ѻ: 'о', ѽ: 'о', ᲂ: 'о', і: 'и', ї: 'и', ѵ: 'и', ѷ: 'и', ѧ: 'я', ꙗ: 'я', є: 'е', ё: 'е', э: 'е' };
   const rawKey = (cl) => cl.map((c) => (c.key === '' ? '' : (RAW[c.ch.toLowerCase()] || c.ch.toLowerCase()))).join('').replace(/[^\p{L}]/gu, '').replace(/ъ$/, '');
   const hasTitlo = (s) => /[҃҇ⷠ-ⷿ]/.test(s);
+  const NUM_U = ['', 'а', 'в', 'г', 'д', 'є', 'ѕ', 'з', 'и', 'ѳ'];
+  const NUM_T = ['', 'і', 'к', 'л', 'м', 'н', 'ѯ', 'ѻ', 'п', 'ч'];
+  const NUM_H = ['', 'р', 'с', 'т', 'у', 'ф', 'х', 'ѱ', 'ѿ', 'ц'];
+  const NUM_VALUE = { а:1, в:2, г:3, д:4, є:5, ѕ:6, з:7, и:8, ѳ:9, і:10, к:20, л:30, м:40, н:50, ѯ:60, ѻ:70, п:80, ч:90, р:100, с:200, т:300, у:400, ф:500, х:600, ѱ:700, ѿ:800, ц:900 };
+  function numeralValue(word) {
+    // Требуем числовой знак и правильный порядок букв, а не только набор
+    // букв-цифр. Положение титла может различаться; грамматические знаки
+    // (ударение, звательце, буквенное титло) не считаем частью цифири.
+    const raw = word.normalize('NFD').toLowerCase().replace(/ї/g, 'і').replace(/е/g, 'є').replace(/о/g, 'ѻ').replace(/ꙋ/g, 'у').replace(/ѡ/g, 'ѿ');
+    if (!/[҃҂]/.test(raw) || /[^авгдєѕзиѳіклмнѯѻпчрстуфхѱѿц҃҂]/.test(raw)) return null;
+    const letters = raw.replace(/҃/g, '');
+    let value = 0, thousands = false;
+    for (const ch of letters) {
+      if (ch === '҂') { if (thousands) return null; thousands = true; continue; }
+      value += NUM_VALUE[ch] * (thousands ? 1000 : 1);
+      thousands = false;
+    }
+    if (thousands || value < 1 || value > 999999) return null;
+    const group = n => {
+      const h = Math.floor(n / 100), t = Math.floor(n % 100 / 10), u = n % 10;
+      return NUM_H[h] + (t === 1 && u ? NUM_U[u] + NUM_T[t] : NUM_T[t] + NUM_U[u]);
+    };
+    const canonical = [...group(Math.floor(value / 1000))].map(ch => '҂' + ch).join('') + group(value % 1000);
+    return letters === canonical ? value : null;
+  }
   // в справочнике вария и оксия — отдельными знаками: и + ̀, а не готовая ѝ
   const nfc = (s) => s.normalize('NFC').replace(/\u045D/g, 'и\u0300').replace(/\u040D/g, 'И\u0300').replace(/\u0450/g, 'е\u0300').replace(/\u0400/g, 'Е\u0300');
   const join = (cl) => nfc(cl.map((c) => c.ch + c.marks).join(''));
@@ -276,8 +301,9 @@
   }
 
   /* под титлом → полное слово */
-  function expandWord(word) {
+  function expandWord(word, opts = {}) {
     if (!hasTitlo(word)) return null;
+    if (numeralValue(word) !== null && (!opts.allowNumeral || word.includes('҂'))) return null;
     const cl = clusters(word);
     for (const e of BY_ABBR) for (const { pre, b } of matches(cl, e.ak, e.px)) {
       const rest = cl.slice(b);
@@ -299,11 +325,23 @@
   /* текст целиком: dir 'abbr' — поставить титла, 'expand' — раскрыть */
   function convert(text, dir, opts = {}) {
     const changes = [];
-    const re = /[\p{L}\p{M}]+/gu;
+    const numerals = [], ambiguous = [];
+    const re = /[\p{L}\p{M}҂]+/gu;
     let out = '', last = 0, m;
     while ((m = re.exec(text))) {
       const w = m[0];
-      const r = dir === 'expand' ? expandWord(w) : abbreviateWord(w, opts);
+      const value = dir === 'expand' ? numeralValue(w) : null;
+      let r;
+      if (value !== null) {
+        const reading = { word:w, value, start:m.index, end:m.index + w.length };
+        const alternative = w.includes('҂') ? null : expandWord(w, { allowNumeral:true });
+        if (alternative && opts.ambiguous === 'expand') r = alternative;
+        else {
+          numerals.push(reading);
+          if (alternative) ambiguous.push({ ...reading, expanded:alternative.out });
+          r = null; // Контекст не определён: исходная запись сохраняется.
+        }
+      } else r = dir === 'expand' ? expandWord(w) : abbreviateWord(w, opts);
       out += text.slice(last, m.index);
       if (r && r.out !== w) {
         changes.push({ from: w, to: r.out, note: r.e.note || (r.e.opt ? N_OPT : ''), start: out.length, end: out.length + r.out.length });
@@ -315,11 +353,10 @@
     // слова под титлом, которых нет в таблице
     const unknown = [];
     if (dir === 'expand') {
-      const numeral = (w) => { const b = w.normalize('NFD').replace(/[\u0300-\u036f\u0483-\u0489]/g, ''); return b.length <= 6 && /^[\u0482авгдєеѕзиѳіклмнѯѻопчрстуфхѱѿѡцꙋ]+$/i.test(b); };
-      (text.match(re) || []).forEach((w) => { if (hasTitlo(w) && !expandWord(w) && !numeral(w) && !unknown.includes(w)) unknown.push(w); });
+      (text.match(re) || []).forEach((w) => { if (hasTitlo(w) && !expandWord(w) && numeralValue(w) === null && !unknown.includes(w)) unknown.push(w); });
     }
-    return { text: out, changes, unknown };
+    return { text: out, changes, unknown, numerals, ambiguous };
   }
 
-  window.TITLA_CONV = { convert, abbreviateWord, expandWord, entries: ENTRIES, keyOf };
+  window.TITLA_CONV = { convert, abbreviateWord, expandWord, numeralValue, entries: ENTRIES, keyOf };
 })();

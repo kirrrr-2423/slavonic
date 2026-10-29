@@ -1,0 +1,25 @@
+/* Intent: сохранить текст и осознанно выбрать чтение, не отвлекаясь от набора.
+   Palette/surfaces: существующие бумага, чернила и киноварь (--panel/--ink/--accent).
+   Depth: тонкие границы. Typography: UI для действий, Ponomar для черновиков.
+   Spacing: шаг 4px; предупреждение появляется только при фактическом сбое. */
+.save-state[data-state="failed"],
+.save-state[data-state="backup-failed"]{color:var(--accent)}
+.save-state[data-state="failed"] .status-dot,
+.save-state[data-state="backup-failed"] .status-dot{background:currentColor}
+#exportText[data-unsaved="true"]{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.text-actions>div{width:min(300px,calc(100vw - 48px));max-height:420px;overflow-y:auto}
+.draft-list{margin-top:4px;padding-top:8px;border-top:1px solid var(--line2)}
+.draft-label,.draft-empty{display:block;padding:8px;font:11px/1.5 var(--ui);color:var(--muted)}
+.draft-list button{display:flex;flex-direction:column;gap:4px}
+.draft-list button>span:first-child{font:10px/1.5 var(--ui);color:var(--muted)}
+.draft-list button>.cs{font-size:22px;line-height:1.6;white-space:normal;overflow-wrap:anywhere}
+.issue-pages{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;color:var(--muted);font-size:11px}
+.issue-pages button{border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);padding:6px 10px;font:inherit}
+.issue-pages button:disabled{opacity:.4;cursor:default}
+.issue-pages button:not(:disabled):hover{border-color:var(--accent);color:var(--accent)}
+.tconv-ambiguities{display:grid;gap:12px;margin-top:16px}
+.tconv-ambiguity{padding:16px;border:1px solid var(--line);border-radius:5px;background:var(--panel)}
+.tconv-ambiguity p{margin:0 0 12px;font:13px/1.7 var(--ui);color:var(--muted)}
+.tconv-ambiguity .cs{font-size:24px;color:var(--ink)}
+.tconv-ambiguity button{display:inline-flex;align-items:center;gap:8px;white-space:normal}
+@media(max-width:720px){.save-state{flex-basis:100%}.tconv-ambiguity{padding:12px}}

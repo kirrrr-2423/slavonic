@@ -218,6 +218,7 @@
     const opt = $('#tcOpt').checked;
     const r = window.TITLA_CONV.convert(inp.value, tc.dir, { optional: opt });
     tc.last = r;
+    tc.lastInput = inp.value;
     let html = '', pos = 0;
     r.changes.forEach((c) => { html += esc(r.text.slice(pos, c.start)) + `<mark class="tc-mk">${esc(r.text.slice(c.start, c.end))}</mark>`; pos = c.end; });
     html += esc(r.text.slice(pos));
@@ -228,9 +229,11 @@
     let info = '';
     if (items.length) {
       info += `<ol class="tconv-list">${items.map((c) => `<li><span class="cs w">${esc(c.from)}</span><span class="arrow" aria-hidden="true">→</span><span class="cs w hl">${esc(c.to)}</span>${c.note ? `<span class="msg">${esc(c.note)}</span>` : ''}</li>`).join('')}</ol>`;
-    } else if (inp.value.trim()) {
+    } else if (inp.value.trim() && !r.numerals?.length) {
       info += `<p class="gl">${tc.dir === 'abbr' ? 'В тексте нет слов, которые пишутся под титлом.' : 'В тексте нет слов под титлом.'}</p>`;
     }
+    if (r.numerals?.length) info += `<p class="gl">Числовые записи сохранены: ${r.numerals.length}.</p>`;
+    if (r.ambiguous?.length) info += `<div class="tconv-ambiguities">${r.ambiguous.map((entry, i) => `<div class="tconv-ambiguity"><p><span class="cs">${esc(entry.word)}</span> может обозначать число ${entry.value.toLocaleString('ru-RU')} или слово <span class="cs">${esc(entry.expanded)}</span>. Сейчас запись сохранена.</p><button class="btn ghost small" data-tc-expand="${i}">Раскрыть как слово <span class="cs">${esc(entry.expanded)}</span></button></div>`).join('')}</div>`;
     if (r.unknown && r.unknown.length) info += `<p class="gl tconv-unk">Нет в таблице — раскройте по смыслу: <span class="cs">${r.unknown.map(esc).join(', ')}</span></p>`;
     $('#tcInfo').innerHTML = info;
   }
@@ -252,6 +255,26 @@
     };
     $$('[data-tdir]').forEach((b) => b.addEventListener('click', () => setDir(b.dataset.tdir)));
     inp.addEventListener('input', () => { store.set('cs-demo-tc-text', inp.value); clearTimeout(tc.timer); tc.timer = setTimeout(runTitlaConv, 120); });
+    $('#tcInfo').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-tc-expand]');
+      if (!button) return;
+      const entry = tc.last?.ambiguous?.[Number(button.dataset.tcExpand)];
+      if (!entry) return;
+      if (tc.lastInput !== inp.value || inp.value.slice(entry.start, entry.end) !== entry.word) {
+        runTitlaConv();
+        toast('Текст изменился. Выберите словесное чтение ещё раз.');
+        return;
+      }
+      inp.focus();
+      inp.setSelectionRange(entry.start, entry.end);
+      if (window.KB) window.KB.insertInto(inp, entry.expanded);
+      else {
+        inp.setRangeText(entry.expanded, entry.start, entry.end, 'end');
+        inp.dispatchEvent(new Event('input', {bubbles:true}));
+      }
+      clearTimeout(tc.timer);
+      runTitlaConv();
+    });
     $('#tcLayout').addEventListener('change', (e) => { if (window.KB) window.KB.setLayout(e.target.checked); inp.focus(); });
     $('#tcOpt').addEventListener('change', (e) => { store.set('cs-demo-tc-opt', e.target.checked ? '1' : '0'); runTitlaConv(); });
     $('#tcCopy').addEventListener('click', () => copy(tc.last ? tc.last.text : ''));

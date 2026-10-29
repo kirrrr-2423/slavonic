@@ -1,7 +1,7 @@
 'use strict';
 (() => {
   const installButton = document.getElementById('pwaInstall');
-  let installPrompt = null, updateAccepted = false, updateWorker = null;
+  let installPrompt = null, updateAccepted = false, updateWorker = null, updateRequest = 0;
   const secureHost = location.protocol === 'https:' ||
     (location.protocol === 'http:' && ['localhost','127.0.0.1','[::1]'].includes(location.hostname));
   if (!secureHost || !('serviceWorker' in navigator)) return;
@@ -32,12 +32,13 @@
   notice.append(label, action, dismiss); document.body.append(notice);
   function showUpdate(worker) {
     updateWorker = worker;
+    updateAccepted = false; action.disabled = false;
     label.textContent = 'Доступна новая версия';
     action.textContent = 'Сохранить текст и обновить';
     action.hidden = false; dismiss.textContent = 'Позже'; notice.hidden = false;
   }
   action.addEventListener('click', () => {
-    if (!updateWorker) return;
+    if (!updateWorker || action.disabled) return;
     // The editor saves on every input. Verify the current value before any reload;
     // if browser storage is unavailable/full, keep the working page intact.
     try {
@@ -53,8 +54,24 @@
       return;
     }
     updateAccepted = true; action.disabled = true;
-    label.textContent = 'Текст сохранён. Обновление…';
-    updateWorker.postMessage({type:'ACTIVATE_UPDATE'});
+    label.textContent = 'Текст сохранён. Проверка открытых окон…';
+    try { updateWorker.postMessage({type:'ACTIVATE_UPDATE', requestId:++updateRequest}); }
+    catch {
+      updateAccepted = false; action.disabled = false;
+      label.textContent = 'Не удалось начать обновление. Повторите попытку.';
+    }
+  });
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.source !== updateWorker || event.data?.type !== 'UPDATE_RESULT' || event.data.requestId !== updateRequest) return;
+    if (event.data.status === 'accepted') {
+      label.textContent = 'Текст сохранён. Обновление…';
+      return;
+    }
+    updateAccepted = false; action.disabled = false;
+    label.textContent = event.data.status === 'blocked'
+      ? 'Закройте другие окна приложения и повторите обновление.'
+      : 'Не удалось начать обновление. Повторите попытку.';
+    action.textContent = 'Повторить обновление';
   });
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     // Other open windows retain their working text and are never forcibly reloaded.

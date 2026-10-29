@@ -28,7 +28,11 @@
 
   function clustersOf(token) {
     const out = [];
-    for (const ch of token) {
+    // Анализируем канонически эквивалентные записи одинаково (ѝ = и + вария).
+    // Исходный token и его UTF-16 диапазон остаются нетронутыми; буквы не сводим
+    // к поисковому остову, чтобы не терять графические различия.
+    const canonical = token.normalize('NFD').replace(/й/g, 'й').replace(/Й/g, 'Й').replace(/ї/g, 'ї').replace(/Ї/g, 'Ї');
+    for (const ch of canonical) {
       if (isMark(ch) && out.length) out[out.length - 1].marks += ch;
       else out.push({ ch, marks: '' });
     }
@@ -148,10 +152,14 @@
       cl.forEach((c, i) => { if (i > 0 && low(c.ch) === 'ꙗ') add('error', 'ya-mid', 'В середине и в конце слова пишется ѧ', (x) => { x[i].ch = withCase(c.ch, 'ѧ'); }); });
 
       // и / і
+      const acceptedI = window.SPELL && window.SPELL.ready && window.SPELL.has(tok.text) === true;
       cl.forEach((c, i) => {
         const l = low(c.ch), nx = cl[i + 1] ? low(cl[i + 1].ch) : '';
         if (l === 'и' && nx && (VOWELS.has(nx) || nx === 'й')) add('error', 'i-before-vowel', 'Перед гласной пишется і (десятеричное)', (x) => { x[i].ch = withCase(c.ch, i === 0 ? 'і' : 'ї'); });
-        if ((l === 'і' || l === 'ї') && i > 0 && CONS.has(nx) && !/^м[іїi]р/.test(base) && !/^в[іїi]н/.test(base) && !/[ѳѯѱѵѷѡф]/.test(base)) {
+        // Точная форма SCI подтверждает словарное исключение (Пїла́тъ,
+        // є҆пі́скопъ и т. п.) только для этой позиционной эвристики.
+        // Контекстные правила ударения и остальные проверки работают дальше.
+        if ((l === 'і' || l === 'ї') && i > 0 && CONS.has(nx) && !acceptedI && !/^м[іїi]р/.test(base) && !/^в[іїi]н/.test(base) && !/[ѳѯѱѵѷѡф]/.test(base)) {
           add('hint', 'i-before-cons', 'Перед согласной обычно пишется и (і — в мі́ръ и в греческих словах)', (x) => { x[i].ch = withCase(c.ch, 'и'); });
         }
       });

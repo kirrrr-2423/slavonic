@@ -37,6 +37,7 @@
   }
   const stressAt = (a) => a.findIndex((x) => HAS_ACC.test(x.m));
   const clear = (a) => { a.forEach((x) => { x.m = x.m.replace(ACC_RE, ''); }); return a; };
+  const withoutStress = word => str(clear(cl(word)));
   // ударение: на последней букве слова — вария, иначе оксия; камора — для различения форм
   function put(a, i, kind) {
     if (i < 0 || !a[i]) return a;
@@ -394,6 +395,16 @@
     const pre = cl('пре' + str(clear(cl(input))));
     res.super = str(d.hasStress ? (() => { const a2 = cl('пре' + input); return a2; })() : pre);
     res.notes = Array.from(notes);
+    if (stressMode === 'none') {
+      // В сравнительной степени есть как готовые, так и построенные формы.
+      // Итоговая настройка распространяется также на них и на превосходную.
+      for (const gender of ['m', 'n', 'f']) {
+        for (const number of ['sg', 'du', 'pl']) res.full[gender][number] = res.full[gender][number].map(cell => cell.map(withoutStress));
+        res.short[gender] = res.short[gender].map(withoutStress);
+      }
+      if (res.comp) res.comp = { short:withoutStress(res.comp.short), full:withoutStress(res.comp.full) };
+      res.super = withoutStress(res.super);
+    }
     return res;
   }
 
@@ -422,7 +433,27 @@
 
   // догадка о 1-м лице ед. ч. настоящего времени
   const MUT = [[/ст$/, 'щ'], [/зд$/, 'жд'], [/д$/, 'жд'], [/т$/, 'щ'], [/з$/, 'ж'], [/с$/, 'ш'], [/([бвмпф])$/, '$1л']];
+  function reflexiveParts(word) {
+    const a = cl(word);
+    return /с[ѧя]$/.test(plainOf(a)) ? { word: str(a.slice(0, -2)), reflexive: true } : { word, reflexive: false };
+  }
+  const attachReflexive = word => {
+    if (word === '—') return word;
+    const a = cl(word);
+    if (a.length && low(a[a.length - 1]) === 'ъ') a.pop();
+    const last = lastLetter(a);
+    // После присоединения частицы ударная гласная уже не последняя:
+    // молю̀ → молю́сѧ. Буквенное окончание самой основы не меняем.
+    if (last >= 0) a[last].m = a[last].m.replace(VAR, OX);
+    return str(a) + 'сѧ';
+  };
+
   function guessPresent(inf) {
+    const base = reflexiveParts(inf);
+    if (base.reflexive) {
+      const guess = guessPresent(base.word);
+      return { ...guess, p1: attachReflexive(guess.p1) };
+    }
     const r = guessPresent0(inf);
     // ити: ударение на суффиксе (ходи́ти) — в 1-м лице на окончании (хождꙋ̀)
     const a = cl(inf);
@@ -467,6 +498,27 @@
   }
 
   function conjugate(inf, p1raw, conjOverride, opts = {}) {
+    const base = reflexiveParts(inf);
+    if (base.reflexive) {
+      // -сѧ — частица, а не часть инфинитивной/настоящей основы.
+      // Спрягаем мы́ти (I) и моли́ти (II) раздельно, затем возвращаем частицу
+      // к смысловому глаголу, включая аналитические формы.
+      const p1base = p1raw && p1raw.trim() ? reflexiveParts(p1raw.trim()).word : p1raw;
+      const result = conjugate(base.word, p1base, conjOverride, opts);
+      result.inf = opts.stress === 'none' ? withoutStress(inf) : inf;
+      result.p1 = attachReflexive(result.p1);
+      if (result.l) result.l = attachReflexive(result.l);
+      if (result.lf) result.lf = result.lf.map(attachReflexive);
+      result.tenses = result.tenses.map(tense => ({ ...tense, forms: tense.forms.map(form => form.split(' · ').map(variant => {
+        if (variant === '—') return variant;
+        if (!tense.compound) return attachReflexive(variant);
+        const words = variant.split(' ');
+        const at = tense.id === 'perf' || tense.id === 'cond' ? 0 : words.length - 1;
+        words[at] = attachReflexive(words[at]);
+        return words.join(' ');
+      }).join(' · ')) }));
+      return result;
+    }
     const key = plainWord(inf).replace(/ѣ/g, 'е').replace(/[іїѵ]/g, 'и').replace(/сѧ$/, '');
     const irr = IRR_VERBS[key];
     const res = { pos: 'verb', inf, tenses: [], notes: [] };
@@ -611,6 +663,15 @@
     const infStr = str(infCl);
     res.tenses = res.tenses.filter((t) => t.forms && t.forms.length);
     res.tenses.push({ id: 'fut2', title: 'Будущее сложное (и҆́мамъ, хощꙋ̀ или бꙋ́дꙋ + инфинитив)', forms: ['и҆́мамъ', 'и҆́маши', 'и҆́мать', 'и҆́мава', 'и҆́мата', 'и҆́мата', 'и҆́мамы', 'и҆́мате', 'и҆́мꙋтъ'].map((x) => `${x} ${infStr}`), compound: true });
+    if (opts.stress === 'none') {
+      // Готовые таблицы, введённое 1-е лицо и вспомогательные глаголы
+      // проходят ту же обработку, что и формы, построенные build().
+      res.inf = withoutStress(res.inf);
+      res.p1 = withoutStress(res.p1);
+      if (res.l) res.l = withoutStress(res.l);
+      if (res.lf) res.lf = res.lf.map(withoutStress);
+      res.tenses = res.tenses.map(tense => ({ ...tense, forms: tense.forms.map(withoutStress) }));
+    }
     return res;
   }
 

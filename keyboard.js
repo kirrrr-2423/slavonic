@@ -45,7 +45,8 @@
 
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
-    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* нет хранилища */ } }
+    set(k, v) { try { localStorage.setItem(k, v); this.error = null; return true; } catch (e) { this.error = e; return false; } },
+    remove(k) { try { localStorage.removeItem(k); return true; } catch (e) { return false; } }
   };
   const st = {
     text: store.get('cs-demo-editor', 'Ѻ҆́тче на́шъ, и҆́же є҆сѝ на нбⷭ҇ѣхъ'),
@@ -54,6 +55,47 @@
     shift: false, opt: false, physShift: false, physOpt: false, codes: false
   };
   let ed = null, kb = null;
+  const DRAFTS_KEY = 'cs-demo-drafts-v1', MAX_DRAFTS = 5;
+  let draftCounter = 0, lastCheckpoint = 0, draftsDirty = false;
+  let drafts = [];
+  try {
+    const value = JSON.parse(store.get(DRAFTS_KEY, '[]'));
+    if (Array.isArray(value)) drafts = value.filter(d => d && typeof d.text === 'string' && Number.isFinite(d.at))
+      .slice(0, MAX_DRAFTS).map((d, i) => ({ id: String(d.id || `${d.at}-${i}`), at: d.at, text: d.text }));
+  } catch (e) { /* Основной черновик доступен независимо от резервных копий. */ }
+  let saveState = { state: store.get('cs-demo-editor', null) === st.text ? 'saved' : 'new' };
+  const getSaveState = () => ({ ...saveState });
+  const getDrafts = () => drafts.map(d => ({ ...d }));
+  function reportSave(state) {
+    saveState = { state };
+    window.dispatchEvent(new CustomEvent('cs-editor-saved', { detail: getSaveState() }));
+  }
+  function checkpoint() {
+    if (!st.text || drafts[0]?.text === st.text) return true;
+    const at = Date.now();
+    drafts = [{ id: `${at}-${draftCounter++}`, at, text: st.text }, ...drafts.filter(d => d.text !== st.text)].slice(0, MAX_DRAFTS);
+    lastCheckpoint = at;
+    draftsDirty = !store.set(DRAFTS_KEY, JSON.stringify(drafts));
+    return !draftsDirty;
+  }
+  function persistText(text) {
+    text = String(text);
+    if (text !== st.text && (!lastCheckpoint || Date.now() - lastCheckpoint >= 30000 || !text)) checkpoint();
+    st.text = text;
+    let saved = store.set('cs-demo-editor', text);
+    const error = store.error;
+    if (!saved && (error?.name === 'QuotaExceededError' || error?.name === 'NS_ERROR_DOM_QUOTA_REACHED' || error?.code === 22 || error?.code === 1014)) {
+      // При нехватке места основной текст важнее истории; копии остаются в памяти.
+      if (store.remove(DRAFTS_KEY)) {
+        draftsDirty = drafts.length > 0;
+        saved = store.set('cs-demo-editor', text);
+      }
+    }
+    // При временном отказе записи резервные версии остаются в памяти и повторно сохраняются при следующем вводе.
+    if (draftsDirty) draftsDirty = !store.set(DRAFTS_KEY, JSON.stringify(drafts));
+    reportSave(!saved ? 'failed' : draftsDirty ? 'backup-failed' : 'saved');
+    return saved;
+  }
 
   const isMarkOnly = (ch) => /^\p{M}+$/u.test(ch);
   const isCased = (ch) => ch && ch.toUpperCase() !== ch.toLowerCase();
@@ -68,7 +110,7 @@
     return up ? m.s : m.b;
   }
 
-  function save() { if (ed) st.text = ed.value; store.set('cs-demo-editor', st.text); renderCodes(); }
+  function save() { const saved = persistText(ed ? ed.value : st.text); renderCodes(); return saved; }
 
   function insertInto(el, ch) {
     el.focus();
@@ -237,14 +279,13 @@
   }
 
   function append(text) {
-    st.text += text;
-    store.set('cs-demo-editor', st.text);
+    persistText(st.text + text);
     if (ed && document.body.contains(ed)) ed.value = st.text;
   }
   function getText() { return ed && document.body.contains(ed) ? ed.value : st.text; }
-  function setText(text) { st.text = text; store.set('cs-demo-editor', text); }
+  function setText(text) { return persistText(text); }
   function getLayout() { return st.layout; }
   function setLayout(on) { st.layout = !!on; store.set('cs-demo-layout', st.layout ? '1' : '0'); }
 
-  window.KB = { mount, append, attachLayout, charFor, MAP, getText, setText, getLayout, setLayout, insertInto };
+  window.KB = { mount, append, attachLayout, charFor, MAP, getText, setText, getLayout, setLayout, insertInto, getSaveState, getDrafts, checkpoint };
 })();

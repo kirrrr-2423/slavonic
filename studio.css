@@ -36,6 +36,7 @@ html,body{height:auto;min-height:100%;overflow:auto}body{font-size:14px;line-hei
 .writing-column{display:block;grid-column:1;grid-row:1 / span 2}
 .keyboard-area{min-width:0;margin-top:20px}
 .keyboard-area .keyboard-heading{margin-top:0}
+.keyboard-foot{flex-wrap:wrap;row-gap:8px}.keyboard-foot-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px}.keyboard-foot-actions #detachKeyboard{color:var(--accent)}
 .workbench .review-rail{grid-column:2;grid-row:1;height:var(--editor-height,340px);min-height:340px;display:flex;flex-direction:column;overflow:hidden}
 .review-rail .rail-tabs,.review-rail .rail-footer{flex-shrink:0}
 .review-rail #railBody{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin}
