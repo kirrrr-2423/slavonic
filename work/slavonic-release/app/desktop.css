@@ -1,0 +1,2 @@
+/* Desktop-only system control appearance. Shared styles.css stays canonical. */
+:root { color-scheme: light; }

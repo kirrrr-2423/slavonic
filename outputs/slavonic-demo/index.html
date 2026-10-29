@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Церковнославянский — клавиатура и правописание</title>
+<meta name="description" content="Интерактивное демо: церковнославянская клавиатура с проверкой, словарём и правилами">
+<link rel="icon" href="icons/favicon.png"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="dictionary-popup.css"><link rel="stylesheet" href="rule-popup.css"><link rel="stylesheet" href="reliability.css">
+<link rel="stylesheet" href="practice.css">
+</head>
+<body>
+<a class="skip-link" href="#content">Перейти к содержимому</a>
+<div class="studio-app">
+ <aside class="studio-side" aria-label="Основная навигация">
+  <a class="studio-brand" href="#klaviatura"><span class="brand-letter cs" aria-hidden="true">А҆</span><span>Церковно-<br>славянский</span></a>
+  <nav id="nav"></nav>
+  <div class="side-bottom"><span>Текст сохраняется в этом браузере</span><button class="quiet" data-route="istochniki">Источники и о программе ↗</button><div id="fontstatus" hidden></div></div>
+ </aside>
+ <div class="studio-body">
+  <header class="studio-top"><div class="crumb"><span id="location">Клавиатура</span></div><label class="global-search"><span aria-hidden="true">⌕</span><input type="search" id="search" aria-label="Поиск по правилам и словарю" placeholder="Найти правило или слово…" autocomplete="off" spellcheck="false"><kbd>⌘ F</kbd></label><button class="icon-button" id="themeToggle" aria-label="Переключить тему">◐</button></header>
+  <main class="main" id="main"><div class="content" id="content"></div></main>
+ </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="data.js"></script><script src="titla.js"></script><script src="keyboard.js"></script><script src="checker.js"></script><script src="spell.js"></script><script src="legacy-data.js"></script><script src="legacy.js"></script><script src="dictionary.js"></script><script src="forms.js"></script><script src="practice-data.js"></script><script src="practice.js"></script><script src="rule-popup.js"></script><script src="studio.js"></script><script src="app.js"></script>
+</body></html>
