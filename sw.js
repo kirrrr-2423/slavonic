@@ -1,6 +1,6 @@
 'use strict';
 // Generated from every packaged runtime asset, including the worker lifecycle template.
-const VERSION = 'e3b4036eca623be8';
+const VERSION = 'f093cc0256a93270';
 const PRECACHE = [
   "app.js",
   "checker.js",
@@ -24,6 +24,8 @@ const PRECACHE = [
   "legacy.js",
   "licenses/SCI-MIT.txt",
   "manifest.webmanifest",
+  "morphology-profiles.js",
+  "morphology.js",
   "practice-data.js",
   "practice.css",
   "practice.js",

@@ -138,6 +138,40 @@ test('leaving the workspace cancels both pending timers', () => {
   e.elements.get('#wordLookup').oninput(); e.audit.sync('library'); assert.equal(e.timers.size, 0);
 });
 
+test('dictionary rail preserves the queried word when opening its selected article', () => {
+  const e = studio({ text:'небесѣ́хъ' });
+  e.ed.setSelectionRange(0, e.ed.value.length);
+  Object.assign(e.context.DICT, {
+    lookupWord: () => ({ items:[9900], exact:true }),
+    entry: () => ['Не́бо','небо','<p>небо</p>'],
+    preview: () => 'небо'
+  });
+  e.audit.configure({ panel:'dictionary' }); e.audit.dictionaryPanel();
+  assert.match(e.elements.get('#lookupResult').innerHTML, /data-darticle="9900" data-darticle-word="небесѣ́хъ"/);
+  const opened = [];
+  e.context.DICT.openPopup = (...args) => opened.push(args);
+  let click;
+  e.context.document.addEventListener = (event, handler) => { if (event === 'click') click = handler; };
+  const script = source('studio.js'), start = script.indexOf(" document.addEventListener('click',e=>{");
+  vm.runInContext(script.slice(start, script.indexOf(" document.addEventListener('mousedown'", start)), e.context);
+  const article = { hasAttribute:name => name === 'data-darticle', dataset:{ darticle:'9900', darticleWord:'небесѣ́хъ' } };
+  click({ target:{ closest:() => article }, preventDefault() {} });
+  assert.equal(opened[0][0],9900);
+  assert.equal(opened[0][1].word,'небесѣ́хъ');
+  const lookup = { hasAttribute:() => false, dataset:{ dlookup:'нбⷭ҇ѣхъ' } };
+  click({ target:{ closest:() => lookup }, preventDefault() {} });
+  assert.deepEqual(opened[1],['нбⷭ҇ѣхъ']);
+});
+
+test('dictionary rail escapes the original query in article button attributes', () => {
+  const e = studio();
+  Object.assign(e.context.DICT, { lookupWord:() => ({items:[9900],exact:true}), entry:() => ['Не́бо','небо','небо'], preview:() => 'небо' });
+  e.audit.configure({panel:'dictionary'}); e.audit.dictionaryPanel();
+  e.elements.get('#wordLookup').value = 'небесѣ́хъ " & <';
+  e.elements.get('#lookupButton').onclick();
+  assert.match(e.elements.get('#lookupResult').innerHTML, /data-darticle-word="небесѣ́хъ &quot; &amp; &lt;"/);
+});
+
 test('storage failure retains in-memory text and shows an export action instead of saved', () => {
   const e = studio(); e.failures.add('cs-demo-editor'); e.kb.setText('мой несохранённый текст'); e.audit.updateSaveState();
   assert.equal(e.kb.getText(), 'мой несохранённый текст'); assert.equal(e.data.get('cs-demo-editor'), 'Отче');

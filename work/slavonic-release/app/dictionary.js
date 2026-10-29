@@ -169,6 +169,24 @@
     отца: 'отец', отцу: 'отец', отцем: 'отец', отцы: 'отец', отцев: 'отец', агнче: 'агнец', агнца: 'агнец', сердца: 'сердце',
     церкве: 'церковь', церкви: 'церковь', любве: 'любовь', любви: 'любовь', крове: 'кровь', крови: 'кровь', имене: 'имя', имени: 'имя'
   };
+  function morphology() {
+    if (!D.ready || !window.MORPH) return null;
+    window.MORPH.prepare(D.e);
+    return window.MORPH;
+  }
+  function morphologyWord(word, expanded = window.TITLA_CONV?.expandWord?.(word)) {
+    const value = expanded?.out || word;
+    // Ударение, добавленное конвертером к сокращённой основе, не является
+    // ударением пользователя. Для исходного слова без ударения ищем без него.
+    return expanded?.out && !/[\u0300\u0301\u0311]/.test(String(word).normalize('NFD'))
+      ? value.normalize('NFD').replace(/[\u0300\u0301\u0311]/g, '') : value;
+  }
+  // Составная статья «Сынъ Человѣческїй» не создаёт омоним для отдельного «сынъ».
+  function exactEntries(key) {
+    const items = D.byKey.get(key) || [];
+    const whole = items.filter((i) => D.kcs[i] === key || D.ktr[i] === key);
+    return (whole.length ? whole : items).slice();
+  }
   function lookupWord(word) {
     if (!D.ready) return null;
     let k = keyOf(word, true);
@@ -182,10 +200,27 @@
       if (titlaMap().has(plain)) k = keyOf(titlaMap().get(plain));
       else if (/[\u0483\u0487\u2DE0-\u2DFF]/.test(word) && titlaMap.st.has(tStem(plain))) k = keyOf(titlaMap.st.get(tStem(plain)));
     }
+    if (k.includes(' ')) {
+      const items = [];
+      D.e.forEach((_, i) => { if (D.kcs[i] === k || D.ktr[i] === k) items.push(i); });
+      if (items.length) return { items, exact: true };
+      const similar = find(word);
+      return similar.items.length ? { items: similar.items, exact: false } : null;
+    }
+    const analysis = morphology()?.analyze(morphologyWord(word, expanded));
+    if (analysis?.analyses.length) {
+      // Словоформа может совпасть с отдельным заголовком другого слова.
+      // Сохраняем обе реальные статьи, а не отдаём приоритет генератору.
+      const lexical = exactEntries(k).filter((i) => D.kcs[i] === k || D.ktr[i] === k);
+      return {
+        items: Array.from(new Set([...lexical, ...analysis.analyses.map((a) => a.entryIndex)])),
+        exact: true, analyses: analysis.analyses, how: 'form'
+      };
+    }
     const ir = IRREG[k.split(' ')[0]];
-    if (ir && D.byKey.has(ir)) return { items: D.byKey.get(ir).slice(0, 3), exact: true };
+    if (ir && D.byKey.has(ir)) return { items: exactEntries(ir), exact: true };
     const w = k.split(' ')[0];
-    if (D.byKey.has(w)) return { items: D.byKey.get(w).slice(0, 3), exact: true };
+    if (D.byKey.has(w)) return { items: exactEntries(w), exact: true };
     const st = stemLookup([w]);
     return st ? { items: st.slice(0, 3), exact: false } : null;
   }
@@ -378,7 +413,85 @@
   }
 
   /* Полная статья поверх текущего раздела; состояние редактора и словаря не меняется. */
-  const popup = { dialog: null, index: -1, returnFocus: null, selection: null, ranges: [], request: 0 };
+  const popup = { dialog: null, index: -1, returnFocus: null, selection: null, ranges: [], request: 0, query: '', paradigm: null, number: 'sg' };
+  const NUMBERS = { sg: 'Ед. число', du: 'Дв. число', pl: 'Мн. число' };
+  const CASE_QUESTIONS = {
+    nominative: 'кто? что?', genitive: 'кого? чего?', dative: 'кому? чему?',
+    accusative: 'кого? что?', instrumental: 'кем? чем?', locative: 'о ком? о чём?', vocative: 'обращение'
+  };
+
+  function formContextHTML(paradigm) {
+    if (!popup.query || !paradigm?.matches.length) return '';
+    const labels = Array.from(new Set(paradigm.matches.map((match) => `${match.caseLabel} · ${match.numberLabel}`)));
+    return `<div class="dictionary-form-context"><p>В тексте <span class="cs">${esc(popup.query)}</span></p>
+<ul>${labels.map((label) => `<li>${esc(label)}</li>`).join('')}</ul>
+${labels.length > 1 ? '<p class="dictionary-form-ambiguity">Окончательный разбор зависит от предложения.</p>' : ''}</div>`;
+  }
+
+  function renderMorphology() {
+    const root = makePopup().querySelector('.dictionary-popup-morphology');
+    const p = popup.paradigm;
+    root.hidden = !p;
+    root.innerHTML = '';
+    if (!p) return;
+    root.innerHTML = `<section class="dictionary-declension" aria-labelledby="dictionaryDeclensionTitle">
+<div class="dictionary-declension-heading"><h3 id="dictionaryDeclensionTitle">Склонение</h3><span>${esc(p.label || p.type)}</span></div>
+${p.explanation ? `<p class="dictionary-declension-note">${esc(p.explanation)}</p>` : ''}
+<div class="dictionary-number-tabs" role="tablist" aria-label="Число существительного">${Object.entries(NUMBERS).map(([number, label]) => `<button type="button" role="tab" id="dictionaryNumber-${number}" data-morph-number="${number}" aria-controls="dictionaryDeclensionPanel" aria-selected="${number === popup.number}" tabindex="${number === popup.number ? 0 : -1}">${label}</button>`).join('')}</div>
+<div id="dictionaryDeclensionPanel" role="tabpanel" aria-labelledby="dictionaryNumber-${popup.number}"></div>
+<p class="dictionary-morph-source"></p></section>`;
+    const source = root.querySelector('.dictionary-morph-source');
+    const sourceURL = typeof p.source === 'string' ? p.source : p.source?.url;
+    const sourceLabel = typeof p.source === 'object' ? p.source.label || p.source.title : '';
+    if (sourceURL && /^https:\/\/azbyka\.ru\//.test(sourceURL)) {
+      const a = document.createElement('a');
+      a.href = sourceURL; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.textContent = sourceLabel || 'Кравецкий, Плетнёва · таблицы склонения ↗';
+      source.appendChild(a);
+    }
+    const limitations = Array.isArray(p.limitations) ? p.limitations : p.limitations ? [p.limitations] : [];
+    if (limitations.length) {
+      const note = document.createElement('span');
+      note.textContent = limitations.join(' '); source.appendChild(note);
+    }
+    renderMorphNumber();
+  }
+
+  function renderMorphNumber() {
+    const p = popup.paradigm;
+    if (!p) return;
+    const dialog = makePopup(), number = popup.number;
+    dialog.querySelectorAll('[data-morph-number]').forEach((button) => {
+      const on = button.dataset.morphNumber === number;
+      button.setAttribute('aria-selected', String(on)); button.tabIndex = on ? 0 : -1;
+    });
+    const panel = dialog.querySelector('#dictionaryDeclensionPanel');
+    panel.setAttribute('aria-labelledby', `dictionaryNumber-${number}`);
+    const matches = p.matches.filter((match) => match.number === number);
+    panel.innerHTML = `<div class="dictionary-morph-detail" aria-live="polite"></div>
+<table class="dictionary-declension-table"><thead><tr><th scope="col">Падеж</th><th scope="col">Форма</th></tr></thead><tbody>${p.rows.map((row, rowIndex) => {
+      const hit = matches.some((match) => match.case === row.case);
+      return `<tr${hit ? ' class="dictionary-form-hit"' : ''}><th scope="row">${esc(row.label)}<span>${esc(CASE_QUESTIONS[row.case] || '')}</span>${hit ? '<small>Форма из текста</small>' : ''}</th><td>${(row[number] || []).map((form, formIndex) => `<button type="button" class="cs dictionary-paradigm-form" data-morph-row="${rowIndex}" data-morph-form="${formIndex}" aria-pressed="false" aria-label="${esc(form + ' — ' + row.label)}">${esc(form)}</button>`).join('<span class="dictionary-form-separator"> / </span>') || '—'}</td></tr>`;
+    }).join('')}</tbody></table>`;
+    const first = matches[0];
+    const row = first ? p.rows.findIndex((item) => item.case === first.case) : 0;
+    const forms = p.rows[row]?.[number] || [];
+    const index = Math.max(0, forms.indexOf(first?.form));
+    showMorphDetail(row, index);
+  }
+
+  function showMorphDetail(rowIndex, formIndex) {
+    const p = popup.paradigm;
+    const row = p?.rows[rowIndex], form = row?.[popup.number]?.[formIndex];
+    if (!form) return;
+    const dialog = makePopup();
+    const match = p.matches.find((item) => item.number === popup.number && item.case === row.case && item.form === form)
+      || window.MORPH?.explain(p.entryIndex, popup.number, row.case, form);
+    const description = match?.explanation || row.explanations?.[popup.number]?.[formIndex] || `${row.label}. ${CASE_QUESTIONS[row.case] || ''}`;
+    dialog.querySelector('.dictionary-morph-detail').innerHTML = `<p><span class="cs">${esc(form)}</span><span>${esc(row.label)} · ${esc(NUMBERS[popup.number])}</span></p>
+<div>${esc(description)}</div>${match?.stem !== undefined && match?.ending !== undefined ? `<div class="dictionary-form-parts">Основа <span class="cs">${esc(match.stem || '—')}</span> · окончание <span class="cs">${esc(match.ending || 'нулевое')}</span>${match.augmentation ? ` · наращение <span class="cs">-${esc(match.augmentation)}-</span>` : ''}</div>` : ''}`;
+    dialog.querySelectorAll('[data-morph-row]').forEach((button) => button.setAttribute('aria-pressed', String(Number(button.dataset.morphRow) === rowIndex && Number(button.dataset.morphForm) === formIndex)));
+  }
 
   function makePopup() {
     if (popup.dialog) return popup.dialog;
@@ -388,7 +501,7 @@
     dialog.setAttribute('aria-describedby', 'dictionaryPopupTranscription');
     dialog.innerHTML = `<div class="dictionary-popup-shell">
 <header class="dictionary-popup-head"><div><h2 id="dictionaryPopupTitle" class="cs"></h2><p id="dictionaryPopupTranscription"></p></div><button type="button" class="dictionary-popup-close" aria-label="Закрыть словарную статью" autofocus>×</button></header>
-<div class="dictionary-popup-scroll" tabindex="0" role="region" aria-label="Толкование слова"><div class="dict-text"></div></div>
+<div class="dictionary-popup-scroll" tabindex="0" role="region" aria-label="Толкование и формы слова"><div class="dictionary-popup-context"></div><div class="dict-text"></div><div class="dictionary-popup-morphology" hidden></div></div>
 <footer class="dictionary-popup-foot"><button type="button" class="btn ghost small" data-popup-copy>Копировать статью</button><button type="button" class="btn small" data-popup-close>Закрыть</button></footer>
 </div>`;
     const close = () => dialog.close();
@@ -398,10 +511,22 @@
       if (D.e[popup.index] && window.APP) window.APP.copy(articleText(D.e[popup.index]));
     });
     dialog.addEventListener('click', (event) => {
+      const number = event.target.closest('[data-morph-number]');
+      if (number) { popup.number = number.dataset.morphNumber; renderMorphNumber(); return; }
+      const form = event.target.closest('[data-morph-row]');
+      if (form) { showMorphDetail(Number(form.dataset.morphRow), Number(form.dataset.morphForm)); return; }
       const entry = event.target.closest('[data-popup-entry]');
       if (!entry) return;
       showPopupArticle(Number(entry.dataset.popupEntry));
       dialog.querySelector('.dictionary-popup-close').focus({ preventScroll: true });
+    });
+    dialog.addEventListener('keydown', (event) => {
+      const tab = event.target.closest('[data-morph-number]');
+      if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      const numbers = Object.keys(NUMBERS), current = numbers.indexOf(popup.number);
+      const i = event.key === 'Home' ? 0 : event.key === 'End' ? 2 : (current + (event.key === 'ArrowRight' ? 1 : 2)) % 3;
+      popup.number = numbers[i]; renderMorphNumber();
+      dialog.querySelector(`[data-morph-number="${popup.number}"]`).focus(); event.preventDefault();
     });
     let pressedOutside = false;
     const outside = (event) => {
@@ -438,9 +563,16 @@
     const dialog = makePopup();
     const [cs, tr, body] = D.e[index];
     popup.index = index;
+    popup.paradigm = morphology()?.paradigm(index, morphologyWord(popup.query)) || null;
+    popup.number = popup.paradigm?.matches[0]?.number || 'sg';
     dialog.querySelector('#dictionaryPopupTitle').textContent = cs;
     dialog.querySelector('#dictionaryPopupTranscription').textContent = tr;
-    dialog.querySelector('.dict-text').innerHTML = articleBody(body);
+    const text = dialog.querySelector('.dict-text');
+    text.innerHTML = articleBody(body);
+    // Однословное толкование вроде «небо» уже видно под заголовком.
+    text.hidden = stripTags(body).trim().toLowerCase() === String(tr).trim().toLowerCase();
+    dialog.querySelector('.dictionary-popup-context').innerHTML = formContextHTML(popup.paradigm);
+    renderMorphology();
     dialog.querySelector('[data-popup-copy]').hidden = false;
     dialog.querySelector('.dictionary-popup-scroll').scrollTop = 0;
   }
@@ -449,6 +581,10 @@
     const dialog = makePopup();
     const items = (result?.items || []).slice(0, 12);
     popup.index = -1;
+    popup.paradigm = null;
+    dialog.querySelector('.dict-text').hidden = false;
+    dialog.querySelector('.dictionary-popup-context').innerHTML = '';
+    renderMorphology();
     dialog.querySelector('#dictionaryPopupTitle').textContent = query;
     dialog.querySelector('#dictionaryPopupTranscription').textContent = failed ? 'Не удалось загрузить словарь' : items.length ? 'Выберите словарную статью' : 'Статья не найдена';
     const explanation = failed ? 'Проверьте, доступен ли файл словаря, и попробуйте ещё раз.'
@@ -460,7 +596,7 @@
     dialog.querySelector('.dictionary-popup-scroll').scrollTop = 0;
   }
 
-  async function openPopup(entryOrQuery) {
+  async function openPopup(entryOrQuery, options = {}) {
     if (typeof entryOrQuery !== 'number' && typeof entryOrQuery !== 'string') return false;
     const request = ++popup.request;
     const returnFocus = document.activeElement;
@@ -471,6 +607,7 @@
       ? Array.from({ length: selectedText.rangeCount }, (_, i) => selectedText.getRangeAt(i).cloneRange()) : [];
     const ready = D.ready || await load();
     if (request !== popup.request) return false;
+    popup.query = typeof entryOrQuery === 'string' ? entryOrQuery.trim() : String(options.word || '').trim();
     let index = entryOrQuery;
     let result = null;
     if (typeof index === 'string') {
